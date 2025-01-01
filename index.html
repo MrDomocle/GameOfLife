@@ -3,21 +3,22 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The web site of domocle</title>
+    <title>Domocle's Game of Life</title>
     <link href="style.css" rel="stylesheet" type="text/css" media="all">
   </head>
-  <body onresize="handleResize()">
+  <body>
     <div class="controls">
-      <button class="button1" onclick="randomiseMap()">🎲</button>
-      <button class="button1" onclick="clearMap()">🔄</button>
-      <button class="button1" onclick="toggle_pause()">⏯</button>
-      <button class="button1" onclick="back_tick()">⏪</button>
-      <button class="button1" onclick="tick()">⏩</button>
+      <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined&display=block" rel="stylesheet"/>
+      <button class="button1" onclick="randomiseMap()"><span class="material-symbols-outlined">ifl</span></button>
+      <button class="button1" onclick="clearMap()"><span class="material-symbols-outlined">ink_eraser</span></button>
+      <button class="button1" id="pause_btn" onclick="toggle_pause()"><span class="material-symbols-outlined">pause</span></button>
+      <button class="button1" onclick="back_tick()"><span class="material-symbols-outlined">arrow_left_alt</span></button>
+      <button class="button1" onclick="tick()"><span class="material-symbols-outlined">arrow_right_alt</span></button>
     </div>
     <div class="container">
       <canvas id="screen" class="gamearea" oncontextmenu="return false;" onselect="return false;" onmousedown="handleMDown(event)" onmouseup="handleMUp(event)" onmousemove="getMousePos(event)" onmouseleave="handleMLeave()"></canvas>
       <div class="settingsarea">
-        <button class="button1">a</button>
+        <span class="tps_disp", id="tps_text">tps: 0</span>
       </div>
     </div>
     <script type="text/javascript" src="main.js">  </script>

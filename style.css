@@ -2,21 +2,13 @@ body {
   background-color: black;
   color: white;
   font-family: Verdana;
-  
-  .center {
-    margin: 0;
-    position: absolute;
-    top: 5%;
-    left: 50%;
-    -ms-transform: translate(-50%, 0%);
-    transform: translate(-50%, 0%);
-  }
+  overflow: hidden;
 
   .container {
     display: flex;
     align-items: bottom;
     margin: 3vh;
-    height: 100vh;
+    height: 73vh;
   }
 
   .controls {
@@ -31,13 +23,16 @@ body {
   }
 
   .gamearea,.settingsarea {
+    display:flex;
+    flex-direction: column;
+    justify-content: flex-end;
     margin: 20px;
     margin-top: 0;
     overflow: auto;
     border: 1px dashed #e2e2e2;
     padding: 20px;
     border-radius: 20px;
-    height: 80%;
+    height: 100%;
   }
   .gamearea {
     flex:3;
@@ -52,11 +47,12 @@ body {
   .button1 {
     background-color: #101142;
     border: none;
+    width: 1.5cm;
+    height: 1.5cm;
     border-radius: 10px;
     color: #e2e2e2;
     padding: 10px 10px;
     text-align: center;
-    text-decoration: none;
     display: inline-block;
     font-size: 24px;
     transition-duration: 40ms;
@@ -64,5 +60,14 @@ body {
   .button1:active {
     transition-duration: 40ms;
     background-color: #4044bb
+  }
+  
+  .tps_disp {
+    font-size: 12px;
+    text-align: right;
+  }
+
+  .material-symbols-outlined {
+    transform: translate(0,12%);
   }
 }

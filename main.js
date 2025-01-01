@@ -2,14 +2,9 @@ let canvasElement = document.getElementById("screen");
 let canvas = canvasElement.getContext("2d");
 let body = document.getElementById("body");
 
-const RESIZABLE = false
-
-let MAP_MARGIN_SIDE = 40;
-let MAP_MARGIN_BOTTOM = 150;
-
 let CELL_SIZE = 10;
-let MAP_SIZE = [Math.floor((window.innerWidth-MAP_MARGIN_SIDE)/CELL_SIZE), Math.floor((window.innerHeight-MAP_MARGIN_BOTTOM)/CELL_SIZE)];
-//let MAP_SIZE = [64,64];
+let MAP_SIZE = [Math.round((canvasElement.clientWidth-40)/CELL_SIZE), Math.round((canvasElement.clientHeight-40)/CELL_SIZE)];
+let old_map_size = MAP_SIZE.map((x) => x);
 
 canvasElement.width = MAP_SIZE[0]*CELL_SIZE;
 canvasElement.height = MAP_SIZE[1]*CELL_SIZE;
@@ -19,7 +14,7 @@ canvas.fillStyle = "white";
 // index in this array is the number of neighbours
 // available states: die, survive, reproduce
 let rules = ["die", "die", "survive", "reproduce", "die", "die", "die", "die", "die"];
-let tickRate = 60;
+let tickRate = 9999;
 
 let tickInterval = 1000/tickRate;
 let ticksThisSecond = 0;
@@ -36,29 +31,32 @@ let my_last = 0;
 let tickTask = setInterval(tick, tickInterval);
 let tpsTask = setInterval(showTps, 1000);
 
-let map = Array(MAP_SIZE[0]);
-for (i = 0; i < MAP_SIZE[0]; i++) {
-    map[i] = Array(MAP_SIZE[1]);
-}
-let map_prev = Array(MAP_SIZE[0]);
-for (i = 0; i < MAP_SIZE[0]; i++) {
-    map_prev[i] = Array(MAP_SIZE[1]);
-}
+window.addEventListener("resize", handleResize);
 
+let map;
+let map_prev;
+
+initMap();
 clearMap();
 
-function mapToMapPrev() {
-    for (x = 0; x < MAP_SIZE[0]; x++) {
-        for (y = 0; y < MAP_SIZE[1]; y++) {
-            map_prev[x][y] = map[x][y];
-        }
+
+function initMap() {
+    map = Array(MAP_SIZE[0]);
+    for (i = 0; i < MAP_SIZE[0]; i++) {
+        map[i] = Array(MAP_SIZE[1]);
     }
+    map_prev = map.map((x) => x);
+}
+
+function mapToMapPrev() {
+    for (i = 0; i < MAP_SIZE[0]; i++) {
+        map_prev[i] = map[i].map((x) => x);
+    }
+    
 }
 function mapPrevToMap() {
-    for (x = 0; x < MAP_SIZE[0]; x++) {
-        for (y = 0; y < MAP_SIZE[1]; y++) {
-            map[x][y] = map_prev[x][y];
-        }
+    for (i = 0; i < MAP_SIZE[0]; i++) {
+        map[i] = map_prev[i].map((x) => x);
     }
 }
 
@@ -144,6 +142,35 @@ function clearMap() {
     mapToMapPrev();
     clearScreen()
 }
+function resizeMap() {
+    if (old_map_size[0] == MAP_SIZE[0] && old_map_size[1] == MAP_SIZE[1]) { return };
+    if (old_map_size[0] < MAP_SIZE[0] && old_map_size[1] < MAP_SIZE[1]) {
+        // expand y direction
+        for (x = 0; x < old_map_size[0]; x++) {
+            for (y = old_map_size[1]; y < MAP_SIZE[1]; y++) {
+                map[x].push(false);
+            }
+        }
+        // expand x direction
+        for (x = old_map_size[0]; x < MAP_SIZE[0]; x++) {
+            map.push(Array(MAP_SIZE[1]));
+            map[x].fill(false);
+        }
+    }
+    if (old_map_size[0] > MAP_SIZE[0] && old_map_size[1] > MAP_SIZE[1]) {
+        // shrink y direction
+        for (x = 0; x < old_map_size[0]; x++) {
+            for (y = MAP_SIZE[1]; y < old_map_size[1]; y--) {
+                map[x].pop();
+            }
+        }
+        // shrink x direction
+        for (x = MAP_SIZE[0]; x < old_map_size[0]; x--) {
+            map.pop()
+        }
+    }
+    map_prev = map.map((x) => x);
+}
 
 function clearScreen() {
     canvas.clearRect(0,0,canvasElement.width,canvasElement.height);
@@ -151,7 +178,7 @@ function clearScreen() {
 
 // MARK: UI & Debug
 function showTps() {
-    console.log("TPS: " + ticksThisSecond);
+    document.getElementById("tps_text").innerHTML = "tps: " + ticksThisSecond;
     ticksThisSecond = 0;
 }
 
@@ -175,8 +202,8 @@ function handleMLeave(event) {
 
 function getMousePos(event) {
     let rect = canvasElement.getBoundingClientRect();
-    mx = Math.floor((event.clientX - rect.left + 1) / CELL_SIZE);
-    my = Math.floor((event.clientY - rect.top + 1) / CELL_SIZE);
+    mx = Math.round((event.clientX - rect.left - 20) / CELL_SIZE);
+    my = Math.round((event.clientY - rect.top - 20) / CELL_SIZE);
     if (mx === mx_last && my === my_last) { return };
     if (mx >= MAP_SIZE[0] || my >= MAP_SIZE[1] ) { return };
     if (m1down) { putCellAtMouse(true) };
@@ -189,29 +216,27 @@ function putCellAtMouse(live) {
 }
 
 function handleResize() {
-    if (!RESIZABLE) { return };
-    MAP_SIZE = [Math.floor((window.innerWidth-MAP_MARGIN_SIDE)/CELL_SIZE), Math.floor((window.innerHeight-MAP_MARGIN_BOTTOM)/CELL_SIZE)];
-
+    toggle_pause();
+    old_map_size = MAP_SIZE.map((x) => x);
+    MAP_SIZE = [Math.round((canvasElement.clientWidth-40)/CELL_SIZE), Math.round((canvasElement.clientHeight-40)/CELL_SIZE)];
     canvasElement.width = MAP_SIZE[0]*CELL_SIZE;
     canvasElement.height = MAP_SIZE[1]*CELL_SIZE;
-
-    map = Array(MAP_SIZE[0]);
-    for (i = 0; i < MAP_SIZE[0]; i++) {
-        map[i] = Array(MAP_SIZE[1]);
-    }
-    map_prev = Array(MAP_SIZE[0]);
-    for (i = 0; i < MAP_SIZE[0]; i++) {
-        map_prev[i] = Array(MAP_SIZE[1]);
-    }
+    canvas.scale(CELL_SIZE,CELL_SIZE);
+    canvas.fillStyle = "white";
+    
+    resizeMap();
+    toggle_pause();
     redrawMap();
 }
 
 function toggle_pause() {
     paused = !paused;
     if (paused) {
+        document.getElementById("pause_btn").innerHTML = "<span class=\"material-symbols-outlined\">play_arrow</span>";
         clearInterval(tickTask);
         clearInterval(tpsTask);
     } else {
+        document.getElementById("pause_btn").innerHTML = "<span class=\"material-symbols-outlined\">pause</span>";
         tickTask = setInterval(tick, tickInterval);
         tpsTask = setInterval(showTps, 1000);
     }

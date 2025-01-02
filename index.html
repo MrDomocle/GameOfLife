@@ -18,10 +18,74 @@
     <div class="container">
       <canvas id="screen" class="gamearea" oncontextmenu="return false;" onselect="return false;" onmousedown="handleMDown(event)" onmouseup="handleMUp(event)" onmousemove="getMousePos(event)" onmouseleave="handleMLeave()"></canvas>
       <div class="settingsarea">
+        <p>
+          This is the Game of Life cellular automaton, invented by John Conway in 1970. <br>
+          Cells can be born, die, or live on every generation (tick), based on the rules below. <br>
+          
+        </p>
+        <label class="setting-label" for="tickRateSlider">tickrate: <span id="tickRateText">20 (default)</span></label>
+          <input type="range" id="tickRateSlider" class="setting" min="0.2" max="250" value="20" step="0.1" oninput="updateTickrate(this.value)">
+        <label class="setting-label" for="cellSizeSlider">cell size: <span id="cellSizeText">8 (default)</span></label>
+          <input type="range" id="cellSizeSlider" class="setting" min="1" max="32" value="8" step="1" oninput="updateCellSize(this.value)" onchange="applyCellSize(this.value)">
+        <label class="setting-label" for="densitySlider">randomiser density: <span id="densityText">0.5 (default)</span></label>
+          <input type="range" id="densitySlider" class="setting" min="0" max="1" value="0.5" step="0.01" oninput="updateDensity(this.value)">
+        <span>rules:</span>
+          <div class="rules" id="rules">
+            <div class="neighbour-div">
+              <label for="zero" class="neighbour-label">0</label>
+              <select class="neighbour-select" name="zero" id="zero">
+                  <option value="die">die</option>
+                  <option value="live">live</option>
+                  <option value="born">born</option>
+              </select>
+            </div>
+            <div class="neighbour-div">
+              <label for="one" class="neighbour-label">1</label>
+              <select class="neighbour-select" name="one" id="one">
+                  <option value="die">die</option>
+                  <option value="live">live</option>
+                  <option value="born">born</option>
+              </select>
+            </div>
+            <div class="neighbour-div">
+              <label for="two" class="neighbour-label">2</label>
+              <select class="neighbour-select" name="two" id="two">
+                  <option value="die">die</option>
+                  <option value="live">live</option>
+                  <option value="born">born</option>
+              </select>
+            </div>
+            <div class="neighbour-div">
+              <label for="three" class="neighbour-label">3</label>
+              <select class="neighbour-select" name="three" id="three">
+                  <option value="die">die</option>
+                  <option value="live">live</option>
+                  <option value="born">born</option>
+              </select>
+            </div>
+            <div class="neighbour-div">
+              <label for="four" class="neighbour-label">4</label>
+              <select class="neighbour-select" name="four" id="four">
+                  <option value="die">die</option>
+                  <option value="live">live</option>
+                  <option value="born">born</option>
+              </select>
+            </div>
+            <div class="neighbour-div">
+              <label for="five" class="neighbour-label">5</label>
+              <select class="neighbour-select" name="five" id="five">
+                  <option value="die">die</option>
+                  <option value="live">live</option>
+                  <option value="born">born</option>
+              </select>
+            </div>
+          </div>
+
+        <div class="spacer"></div>
         <span class="tps_disp", id="tps_text">tps: 0</span>
       </div>
     </div>
-    <script type="text/javascript" src="main.js">  </script>
+    <script type="text/javascript" src="script/main.js">  </script>
     
   </body>
 </html>

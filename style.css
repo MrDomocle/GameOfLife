@@ -1,7 +1,7 @@
 body {
   background-color: black;
   color: white;
-  font-family: Verdana;
+  font-family: 'Courier New', Courier, monospace;
   overflow: hidden;
 
   .container {
@@ -25,7 +25,7 @@ body {
   .gamearea,.settingsarea {
     display:flex;
     flex-direction: column;
-    justify-content: flex-end;
+    justify-content: flex-start;
     margin: 20px;
     margin-top: 0;
     overflow: auto;
@@ -61,9 +61,38 @@ body {
     transition-duration: 40ms;
     background-color: #4044bb
   }
-  
+  .setting-label {
+    font-size: 14px;
+    align-self: left;
+  }
+  .setting {
+    justify-self: flex-start;
+    accent-color: #e2e2e2; 
+  }
+  .neighbour-div {
+    display: inline-flex;
+    flex-direction: column;
+    align-content: center;
+  }
+  .neighbour-label {
+    align-self: center;
+  }
+  .neighbour-select {
+    background:#161616;
+    color: #e2e2e2;
+    border: none;
+    border-radius: 5px;
+    width: 35px;
+    height: 35px;
+    
+  }
+
+  .spacer {
+    flex-grow: 1;
+  }
   .tps_disp {
     font-size: 12px;
+    justify-self: flex-end;
     text-align: right;
   }
 

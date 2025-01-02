@@ -1,2 +1,4 @@
 test.html
 .git/*
+node_modules/*
+package*

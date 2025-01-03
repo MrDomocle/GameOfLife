@@ -90,7 +90,7 @@ body {
   .spacer {
     flex-grow: 1;
   }
-  .tps_disp {
+  .data_disp {
     font-size: 12px;
     justify-self: flex-end;
     text-align: right;

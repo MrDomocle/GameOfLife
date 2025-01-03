@@ -8,15 +8,24 @@ let cell_size = cell_size_default;
 let MAP_SIZE = [Math.round((canvasElement.clientWidth-40)/cell_size), Math.round((canvasElement.clientHeight-40)/cell_size)];
 let old_map_size = MAP_SIZE.map((x) => x);
 
+let cellFillStyle = "white";
+let rulerStrokeStyle = "lightcoral";
+let rulerStrokeWidth = 0.25;
+let rulerFontStyle = "px Courier New";
+let rulerFontColour = "lightcoral";
+
 canvasElement.width = MAP_SIZE[0]*cell_size;
 canvasElement.height = MAP_SIZE[1]*cell_size;
 canvas.scale(cell_size,cell_size);
-canvas.fillStyle = "white";
+canvas.fillStyle = cellFillStyle;
+canvas.strokeStyle = rulerStrokeStyle;
+canvas.lineWidth = rulerStrokeWidth;
+canvas.font = 16/cell_size + rulerFontStyle;
 
 // index in rule arrays is the number of neighbours
 let born = [false, false, false, true, false, false, false, false, false];
 let survive = [false, false, true, true, false, false, false, false, false];
-let densityDefault = 0.5;
+let densityDefault = 0.25;
 let density = densityDefault;
 
 let tickRateDefault = 20;
@@ -25,7 +34,9 @@ let frameRate = 60;
 
 let tickInterval = 1000/tickRate;
 let ticksThisSecond = 0;
+let tps = 0;
 let frameInterval = 1000/frameRate;
+let dataInterval = 1000/60
 
 // map will be split into THREADS_* parts along each coordinate
 const THREADS_X = 4;
@@ -40,6 +51,8 @@ let activeWorkers = 0;
 let paused = false;
 let m1down = false;
 let m2down = false;
+let shiftdown = false;
+let lockDirection = "-"; // - r(ecording) ns we
 let suppressResizeLog = false;
 
 let mx = 0;
@@ -47,11 +60,20 @@ let my = 0;
 let mx_last = 0;
 let my_last = 0;
 
+let rulerActive = false;
+let mx_anchor = 0;
+let my_anchor = 0;
+let dx = 0;
+let dy = 0;
+
 let tickTask = setInterval(tick, tickInterval);
 let drawTask = setInterval(redrawMap, frameInterval);
-let tpsTask = setInterval(showTps, 1000);
+let dataTask = setInterval(showData, dataInterval);
+let tpsTask = setInterval(recordTps, 1000);
 
 window.addEventListener("resize", handleResize);
+window.addEventListener("keyup", handleKeyUp);
+window.addEventListener("keydown", handleKeyDown);
 
 let map;
 let map_prev;
@@ -252,6 +274,7 @@ function localtick() {
 // MARK: Drawing
 function redrawMap() {
     clearScreen();
+    // draw GoL
     canvas.beginPath();
     for (x = 0; x < MAP_SIZE[0]; x++) {
         for (y = 0; y < MAP_SIZE[1]; y++) {
@@ -261,6 +284,20 @@ function redrawMap() {
         }
     }
     canvas.fill();
+    // draw ruler
+    if (rulerActive) {
+        canvas.beginPath();
+        canvas.moveTo(mx_anchor+0.5, my_anchor+0.5);
+        canvas.lineTo(mx+0.5,my+0.5);
+        canvas.stroke();
+    
+        let xm = (mx_anchor+mx+1)/2;
+        let ym = (my_anchor+my+1)/2;
+        
+        canvas.fillStyle = rulerFontColour;
+        canvas.fillText(Math.sqrt(dx**2+dy**2).toFixed(1), xm, ym);
+        canvas.fillStyle = cellFillStyle;
+    }
 }
 function clearMap() {
     for (i = 0; i < MAP_SIZE[0]; i++) {
@@ -274,12 +311,24 @@ function clearScreen() {
     canvas.clearRect(0,0,canvasElement.width,canvasElement.height);
 }
 
-// MARK: UI & Debug
-function showTps() {
-    document.getElementById("tps_text").innerHTML = "tps: " + ticksThisSecond;
+// MARK: ### UI & Debug
+function showData() {
+    let str = "";
+    updateRuler();
+    str += "x: " + mx;
+    str += "; y: " + my;
+
+    str += "; tps: "
+    str += (!paused) ? tps : "(paused)";
+
+    document.getElementById("data_text").innerHTML = str;
+}
+function recordTps() {
+    tps = ticksThisSecond;
     ticksThisSecond = 0;
 }
 
+// MARK: Mouse
 function handleMDown(event) {
     event.preventDefault();
     m1down = event.button === 0 ? true : m1down;
@@ -288,6 +337,7 @@ function handleMDown(event) {
     if (!(mx >= MAP_SIZE[0] || my >= MAP_SIZE[1] )) {
         if (m1down) { putCellAtMouse(true) };
         if (m2down) { putCellAtMouse(false) };
+        if (shiftdown) { lockDraw() };
     }
 
     if (event.button === 1) {
@@ -298,23 +348,65 @@ function handleMDown(event) {
 function handleMUp(event) {
     m1down = event.button === 0 ? false : m1down;
     m2down = event.button === 2 ? false : m2down;
+    unlockDraw();
 }
 function handleMLeave(event) {
     m1down = false;
     m2down = false;
+    unlockDraw();
 }
 
 function getMousePos(event) {
     let rect = canvasElement.getBoundingClientRect();
+    mx_last = mx;
+    my_last = my;
     mx = Math.floor((event.clientX - rect.left - 20) / cell_size);
     my = Math.floor((event.clientY - rect.top - 20) / cell_size);
-    //if (mx === mx_last && my === my_last) { return };
-    if (mx >= MAP_SIZE[0] || my >= MAP_SIZE[1] ) { return };
+    switch (lockDirection) {
+        case "ns":
+            mx = mx_last;
+            break;
+        case "we":
+            my = my_last;
+            break;
+        case "r":
+            recordLockDraw();
+            break;
+    }
     if (m1down) { putCellAtMouse(true) };
     if (m2down) { putCellAtMouse(false) };
 }
+// MARK: Direction
+function lockDraw() {
+    lockDirection = "r";
+}
+function unlockDraw() {
+    lockDirection = "-";
+}
+function recordLockDraw() {
+    if (!m1down) { return };
+    if (mx == mx_last && my == my_last) { return };
+    if (mx == mx_last) {
+        lockDirection = "ns";
+    }
+    if (my == my_last) {
+        lockDirection = "we";
+    }
+}
+
+function recordAnchor() {
+    mx_anchor = mx;
+    my_anchor = my;
+    console.log("set anchor");
+}
+function updateRuler() {
+    dx = mx-mx_anchor;
+    dy = my-my_anchor;
+}
 
 function putCellAtMouse(state) {
+    if (mx >= MAP_SIZE[0] || my >= MAP_SIZE[1] ) { return };
+    if (mx < 0 || my < 0 ) { return };
     map[mx][my] = state;
     redrawMap();
 }
@@ -377,7 +469,10 @@ function handleResize() {
     canvasElement.width = MAP_SIZE[0]*cell_size;
     canvasElement.height = MAP_SIZE[1]*cell_size;
     canvas.scale(cell_size,cell_size);
-    canvas.fillStyle = "white";
+    canvas.fillStyle = cellFillStyle;
+    canvas.strokeStyle = rulerStrokeStyle;
+    canvas.lineWidth = rulerStrokeWidth;
+    canvas.font = 16/cell_size + rulerFontStyle;
     
     // apply to map array
     resizeMap();
@@ -431,17 +526,47 @@ function resizeMap() {
     
 }
 
+// MARK: Keys
+function handleKeyUp(e) {
+    if (e.key == " " || e.key == "k") {
+        e.preventDefault();
+        toggle_pause();
+    }
+    if (e.key == "l") {
+        tick();
+    }
+    if (e.key == "j") {
+        back_tick();
+    }
+    if (!e.shiftKey) {
+        unlockDraw();
+        shiftdown = false;
+    }
+    if (!e.ctrlKey) {
+        ctrlDown = false;
+    }
+}
+function handleKeyDown(e) {
+    if (e.shiftKey && !e.repeat) {
+        lockDraw();
+        shiftdown = true;
+    }
+    if (e.ctrlKey && !e.repeat) {
+        recordAnchor();
+        rulerActive = !rulerActive;
+    }
+}
+// MARK: Pause
 function forcePause() {
     document.getElementById("pause_btn").innerHTML = "<span class=\"material-symbols-outlined\">play_arrow</span>";
-    document.getElementById("tps_text").innerHTML = "tps: (paused)";
     clearInterval(tickTask);
     clearInterval(tpsTask);
+    ticksThisSecond = 0;
 }
 function forcePlay() {
     document.getElementById("pause_btn").innerHTML = "<span class=\"material-symbols-outlined\">pause</span>";
-    document.getElementById("tps_text").innerHTML = "tps: " + ticksThisSecond;
     tickTask = setInterval(tick, tickInterval);
-    tpsTask = setInterval(showTps, 1000);
+    tpsTask = setInterval(showData, 1000);
 }
 
 function toggle_pause() {

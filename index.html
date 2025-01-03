@@ -19,16 +19,18 @@
       <canvas id="screen" class="gamearea" oncontextmenu="return false;" onselect="return false;" onmousedown="handleMDown(event)" onmouseup="handleMUp(event)" onmousemove="getMousePos(event)" onmouseleave="handleMLeave()"></canvas>
       <div class="settingsarea">
         <p>
-          This is the Game of Life cellular automaton, invented by John Conway in 1970. <br>
-          Cells can be born, die, or live on every generation (tick), based on the rules below. <br>
-          
+          <b>*Spacebar / K:</b> pause<br>
+          <b>*L:</b> step forward, <b>J:</b> step back<br>
+          <b>*LMB:</b> draw, RMB:</b> erase<br>
+          <b>*Hold Shift:</b> straight lines<br>
+          <b>*Ctrl:</b> toggle ruler<br>
         </p>
         <label class="setting-label" for="tickRateSlider">tickrate: <span id="tickRateText">20 (default)</span></label>
           <input type="range" id="tickRateSlider" class="setting" min="0.2" max="250" value="20" step="0.1" oninput="updateTickrate(this.value)">
         <label class="setting-label" for="cellSizeSlider">cell size: <span id="cellSizeText">8 (default)</span></label>
           <input type="range" id="cellSizeSlider" class="setting" min="1" max="32" value="8" step="1" oninput="updateCellSize(this.value)" onchange="applyCellSize(this.value)">
-        <label class="setting-label" for="densitySlider">randomiser density: <span id="densityText">0.5 (default)</span></label>
-          <input type="range" id="densitySlider" class="setting" min="0" max="1" value="0.5" step="0.01" oninput="updateDensity(this.value)">
+        <label class="setting-label" for="densitySlider">randomiser density: <span id="densityText">0.25 (default)</span></label>
+          <input type="range" id="densitySlider" class="setting" min="0" max="1" value="0.25" step="0.01" oninput="updateDensity(this.value)">
         <span>rules:</span>
           <div class="rules" id="rules">
             <div class="neighbour-div">
@@ -82,7 +84,7 @@
           </div>
 
         <div class="spacer"></div>
-        <span class="tps_disp", id="tps_text">tps: 0</span>
+        <span class="data_disp", id="data_text">tps: 0</span>
       </div>
     </div>
     <script type="text/javascript" src="script/main.js">  </script>

@@ -36,7 +36,7 @@ let tickInterval = 1000/tickRate;
 let ticksThisSecond = 0;
 let tps = 0;
 let frameInterval = 1000/frameRate;
-let dataInterval = 1000/60
+let dataInterval = 1000/60;
 
 // map will be split into THREADS_* parts along each coordinate
 const THREADS_X = 4;
@@ -81,8 +81,6 @@ let map_prev;
 initMap();
 clearMap();
 randomiseMap();
-
-//tick();
 
 // MARK: Map shenanigans
 function initMap() {
@@ -318,13 +316,12 @@ function showData() {
     str += "x: " + mx;
     str += "; y: " + my;
 
-    str += "; tps: "
-    str += (!paused) ? tps : "(paused)";
+    str += "; tps: " + tps;
 
     document.getElementById("data_text").innerHTML = str;
 }
 function recordTps() {
-    tps = ticksThisSecond;
+    tps = (!paused) ? ticksThisSecond : "(paused)";
     ticksThisSecond = 0;
 }
 
@@ -560,13 +557,13 @@ function handleKeyDown(e) {
 function forcePause() {
     document.getElementById("pause_btn").innerHTML = "<span class=\"material-symbols-outlined\">play_arrow</span>";
     clearInterval(tickTask);
-    clearInterval(tpsTask);
     ticksThisSecond = 0;
+    recordTps();
 }
 function forcePlay() {
     document.getElementById("pause_btn").innerHTML = "<span class=\"material-symbols-outlined\">pause</span>";
     tickTask = setInterval(tick, tickInterval);
-    tpsTask = setInterval(showData, 1000);
+    recordTps();
 }
 
 function toggle_pause() {

@@ -45,7 +45,7 @@ function sendMapBack() {
             type: "done",
             id: id,
             map: map
-        }, 
+        }
     );
 }
 

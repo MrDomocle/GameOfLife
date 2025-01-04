@@ -58,7 +58,7 @@ let paused = false;
 let m1down = false;
 let m2down = false;
 let shiftdown = false;
-let lockDirection = "-"; // - r(ecording) ns we
+let lockDirection = "-"; // can be "-", "r"(recording direction), "ns" or "we"
 let suppressResizeLog = false;
 
 let mx = 0;
@@ -84,41 +84,60 @@ window.addEventListener("keydown", handleKeyDown);
 let map;
 let map_prev;
 
+class MapMatrix {
+    array;
+    constructor(x, y) {
+        this.xSize = x;
+        this.ySize = y;
+        this.array = new Int8Array(x*y).fill(0);
+    }
+
+    getState(x, y) {
+        return this.array[x*this.xSize+y]
+    }
+    setState(x, y, state) {
+        this.array[x*this.xSize+y] = state;
+    }
+
+    resize(newX, newY) {
+        console.log("unimplemented");
+    }
+    clear() {
+        this.array = new Int8Array(this.xSize*this.ySize).fill(0);
+    }
+}
+
 initMap();
 clearMap();
 randomiseMap();
 
 // MARK: Map shenanigans
+
+
 function initMap() {
-    map = Array(MAP_SIZE[0]).fill(false).map(() => Array(MAP_SIZE[1]).fill(false));
-    map_prev = map.map((x) => x);
+    map = new MapMatrix(MAP_SIZE[0], MAP_SIZE[1]);
+    map_prev = new MapMatrix(MAP_SIZE[0], MAP_SIZE[1]);
+    setTimeout(console.log(map.getState(0,0)), 1000);
 }
 
 function mapToMapPrev() {
-    for (i = 0; i < MAP_SIZE[0]; i++) {
-        map_prev[i] = map[i].map((x) => x);
-    }
+    map_prev.array.set(map.array, 0);
     
 }
 function mapPrevToMap() {
-    for (i = 0; i < MAP_SIZE[0]; i++) {
-        map[i] = map_prev[i].map((x) => x);
-    }
+    map.array.set(map_prev.array, 0);
 }
 
 function randomiseMap() {
-    //forcePause();
     for (x = 0; x < MAP_SIZE[0]; x++) {
         for (y = 0; y < MAP_SIZE[1]; y++) {
             if (Math.random() < density) {
-                map[x][y] = true;
-            }
-            else {
-                map[x][y] = false;
+                map.setState(x,y, 1);
+            } else {
+                map.setState(x,y, 0);
             }
         }
     }
-    //if (!paused) { forcePlay() };
 }
 
 function getWorkerOffsets(i) {
@@ -230,7 +249,7 @@ function getState(x,y) {
     let rx = x;
     let ry = y;
     if (rx < MAP_SIZE[0] && ry < MAP_SIZE[1] && rx >= 0 && ry >= 0) {
-        return map_prev[rx][ry];
+        return map_prev.getState(rx,ry);
     }
     return false;
 }
@@ -238,35 +257,35 @@ function getState(x,y) {
 function countNeighbours(x,y) {
     nbs = 0;
 
-    nbs += (getState(x-1,y-1)) ? 1 : 0;
-    nbs += (getState(x,y-1)) ? 1 : 0;
-    nbs += (getState(x+1,y-1)) ? 1 : 0;
+    nbs += getState(x-1,y-1);
+    nbs += getState(x,y-1);
+    nbs += getState(x+1,y-1);
 
-    nbs += (getState(x-1,y)) ? 1 : 0;
+    nbs += getState(x-1,y);
 
-    nbs += (getState(x+1,y)) ? 1 : 0;
+    nbs += getState(x+1,y);
 
-    nbs += (getState(x-1,y+1)) ? 1 : 0;
-    nbs += (getState(x,y+1)) ? 1 : 0;
-    nbs += (getState(x+1,y+1)) ? 1 : 0;
+    nbs += getState(x-1,y+1);
+    nbs += getState(x,y+1);
+    nbs += getState(x+1,y+1);
 
     return nbs
 }
 function updateState(x,y) {
     nbs = countNeighbours(x,y);
-    if (map_prev[x][y]) {
+    if (map_prev.getState(x,y) == 1) {
         // if alive, check survival
         if (survive[nbs]) {
-            return true;
+            return 1;
         } else {
-            return false;
+            return 0;
         }
     } else if (born[nbs]) {
         // else, check born
-        return true;
+        return 1;
     }
     // otherwise, cell remains dead
-    return false;
+    return 0;
 }
 
 function back_tick() {
@@ -278,7 +297,7 @@ function localtick() {
     isWorking = true;
     for (x = 0; x < MAP_SIZE[0]; x++) {
         for (y = 0; y < MAP_SIZE[1]; y++) {
-            map[x][y] = updateState(x,y);
+            map.setState(x,y, updateState(x,y));
         }
     }
     isWorking = false;
@@ -292,7 +311,7 @@ function redrawMap() {
     canvas.beginPath();
     for (x = 0; x < MAP_SIZE[0]; x++) {
         for (y = 0; y < MAP_SIZE[1]; y++) {
-            if (map[x][y]) {
+            if (map.getState(x,y) == 1) {
                 canvas.roundRect(x,y, 1,1, 0.2);
             }
         }
@@ -324,9 +343,7 @@ function redrawMap() {
     }
 }
 function clearMap() {
-    for (i = 0; i < MAP_SIZE[0]; i++) {
-        map[i].fill(false);
-    }
+    map.clear();
     mapToMapPrev();
     clearScreen()
 }

@@ -6,7 +6,7 @@ let cell_size_default = 8;
 let cell_size_warn = 2;
 let cell_size = cell_size_default;
 let MAP_SIZE = [Math.round((canvasElement.clientWidth-40)/cell_size), Math.round((canvasElement.clientHeight-40)/cell_size)];
-let old_map_size = MAP_SIZE.map((x) => x);
+let old_map_size = [MAP_SIZE[0], MAP_SIZE[1]];
 
 let cellFillStyle = "white";
 let rulerStrokeStyle = "lightcoral";
@@ -90,17 +90,66 @@ class MapMatrix {
         this.xSize = x;
         this.ySize = y;
         this.array = new Int8Array(x*y).fill(0);
+        console.log(this.xSize,this.ySize);
     }
 
     getState(x, y) {
-        return this.array[x*this.xSize+y]
+        if (x < this.xSize && y < this.ySize && x >= 0 && y >= 0) {
+            return this.array[x*this.ySize+y]==1
+        } else {
+            return false;
+        }
+    }
+    getStateNum(x, y) {
+        if (x < this.xSize && y < this.ySize && x >= 0 && y >= 0) {
+            return this.array[x*this.ySize+y]
+        } else {
+            return 0;
+        }
     }
     setState(x, y, state) {
-        this.array[x*this.xSize+y] = state;
+        this.array[x*this.ySize+y] = state ? 1 : 0;
+    }
+
+    getNeighbours(x, y) {
+        let nbs = 0;
+
+        nbs += this.getStateNum(x-1,y-1);
+        nbs += this.getStateNum(x-1,y);
+        nbs += this.getStateNum(x-1,y+1);
+
+        nbs += this.getStateNum(x,y-1);
+        
+        nbs += this.getStateNum(x,y+1);
+
+        nbs += this.getStateNum(x+1,y-1);
+        nbs += this.getStateNum(x+1,y);
+        nbs += this.getStateNum(x+1,y+1);
+    
+        return nbs
     }
 
     resize(newX, newY) {
-        console.log("unimplemented");
+        if (newX == this.xSize && newY == this.ySize) { return };
+        // make new-sized array
+        let newArr = new Int8Array(newX*newY).fill(0);
+        // copy old values
+        for (x = 0; x < newX; x++) {
+            for (y = 0; y < newY; y++) {
+                newArr[x*newY+y] = this.array[x*this.ySize+y];
+            }
+        }
+        // replace old array
+        this.array = newArr;
+        this.xSize = newX;
+        this.ySize = newY;
+
+        // log change
+        if (!suppressResizeLog) {
+            console.log("Resize: ", old_map_size, "to", MAP_SIZE);
+            suppressResizeLog = true;
+            setTimeout(() => {suppressResizeLog = false}, 500);
+        }
     }
     clear() {
         this.array = new Int8Array(this.xSize*this.ySize).fill(0);
@@ -117,24 +166,23 @@ randomiseMap();
 function initMap() {
     map = new MapMatrix(MAP_SIZE[0], MAP_SIZE[1]);
     map_prev = new MapMatrix(MAP_SIZE[0], MAP_SIZE[1]);
-    setTimeout(console.log(map.getState(0,0)), 1000);
 }
 
 function mapToMapPrev() {
-    map_prev.array.set(map.array, 0);
+    map_prev.array.set(map.array);
     
 }
 function mapPrevToMap() {
-    map.array.set(map_prev.array, 0);
+    map.array.set(map_prev.array);
 }
 
 function randomiseMap() {
     for (x = 0; x < MAP_SIZE[0]; x++) {
         for (y = 0; y < MAP_SIZE[1]; y++) {
             if (Math.random() < density) {
-                map.setState(x,y, 1);
+                map.setState(x,y, true);
             } else {
-                map.setState(x,y, 0);
+                map.setState(x,y, false);
             }
         }
     }
@@ -220,7 +268,7 @@ function tick() {
 }
 function concatWorkerMaps() {
     for (i = 0; i < THREADS; i++) {
-            offsets = getWorkerOffsets(i);
+            let offsets = getWorkerOffsets(i);
             for (x = 0; x < offsets.xEnd-offsets.xStart; x++) {
                 for (y = 0; y < offsets.yEnd-offsets.yStart; y++) {
                     let state = false;
@@ -243,49 +291,22 @@ function handleWorkerMessage(e) {
     }
     
 }
-// MARK: local tick
-// wrapper to handle out of bounds coordinates
-function getState(x,y) {
-    let rx = x;
-    let ry = y;
-    if (rx < MAP_SIZE[0] && ry < MAP_SIZE[1] && rx >= 0 && ry >= 0) {
-        return map_prev.getState(rx,ry);
-    }
-    return false;
-}
-// returns the number of moore neighbours of the cell at x,y
-function countNeighbours(x,y) {
-    nbs = 0;
-
-    nbs += getState(x-1,y-1);
-    nbs += getState(x,y-1);
-    nbs += getState(x+1,y-1);
-
-    nbs += getState(x-1,y);
-
-    nbs += getState(x+1,y);
-
-    nbs += getState(x-1,y+1);
-    nbs += getState(x,y+1);
-    nbs += getState(x+1,y+1);
-
-    return nbs
-}
+// MARK: game logic
 function updateState(x,y) {
-    nbs = countNeighbours(x,y);
-    if (map_prev.getState(x,y) == 1) {
+    nbs = map_prev.getNeighbours(x,y);
+    if (map_prev.getState(x,y)) {
         // if alive, check survival
         if (survive[nbs]) {
-            return 1;
+            return true;
         } else {
-            return 0;
+            return false;
         }
     } else if (born[nbs]) {
         // else, check born
-        return 1;
+        return true;
     }
     // otherwise, cell remains dead
-    return 0;
+    return false;
 }
 
 function back_tick() {
@@ -311,7 +332,7 @@ function redrawMap() {
     canvas.beginPath();
     for (x = 0; x < MAP_SIZE[0]; x++) {
         for (y = 0; y < MAP_SIZE[1]; y++) {
-            if (map.getState(x,y) == 1) {
+            if (map.getState(x,y)) {
                 canvas.roundRect(x,y, 1,1, 0.2);
             }
         }
@@ -381,8 +402,8 @@ function handleMDown(event) {
     }
 
     if (event.button === 1) {
-        console.log(countNeighbours(mx,my) + " neighbours at " + mx + ',' + my);
-        console.log(survive[countNeighbours(mx,my)], born[countNeighbours(mx,my)], getState(mx,my));
+        console.log(map.getNeighbours(mx,my) + " neighbours at " + mx + ',' + my);
+        console.log(survive[map.getNeighbours(mx,my)], born[map.getNeighbours(mx,my)], map.getState(mx,my));
     }
 }
 function handleMUp(event) {
@@ -447,7 +468,7 @@ function updateRuler() {
 function putCellAtMouse(state) {
     if (mx >= MAP_SIZE[0] || my >= MAP_SIZE[1] ) { return };
     if (mx < 0 || my < 0 ) { return };
-    map[mx][my] = state;
+    map.setState(mx,my, state);
     redrawMap();
 }
 
@@ -515,7 +536,9 @@ function handleResize() {
     canvas.font = rulerFontSize/cell_size + rulerFontStyle;
     
     // apply to map array
-    resizeMap();
+    map.resize(MAP_SIZE[0], MAP_SIZE[1]);
+    map_prev.resize(MAP_SIZE[0], MAP_SIZE[1]);
+
     if (doThreads) {
         killWorkers();
         initWorkers();

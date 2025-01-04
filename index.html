@@ -32,57 +32,8 @@
           <input type="range" id="cellSizeSlider" class="setting" min="1" max="32" value="8" step="1" oninput="updateCellSize(this.value)" onchange="applyCellSize(this.value)">
         <label class="setting-label" for="densitySlider">randomiser density: <span id="densityText">0.25 (default)</span></label>
           <input type="range" id="densitySlider" class="setting" min="0" max="1" value="0.25" step="0.01" oninput="updateDensity(this.value)">
-        <span>rules:</span>
-          <div class="rules" id="rules">
-            <div class="neighbour-div">
-              <label for="zero" class="neighbour-label">0</label>
-              <select class="neighbour-select" name="zero" id="zero">
-                  <option value="die">die</option>
-                  <option value="live">live</option>
-                  <option value="born">born</option>
-              </select>
-            </div>
-            <div class="neighbour-div">
-              <label for="one" class="neighbour-label">1</label>
-              <select class="neighbour-select" name="one" id="one">
-                  <option value="die">die</option>
-                  <option value="live">live</option>
-                  <option value="born">born</option>
-              </select>
-            </div>
-            <div class="neighbour-div">
-              <label for="two" class="neighbour-label">2</label>
-              <select class="neighbour-select" name="two" id="two">
-                  <option value="die">die</option>
-                  <option value="live">live</option>
-                  <option value="born">born</option>
-              </select>
-            </div>
-            <div class="neighbour-div">
-              <label for="three" class="neighbour-label">3</label>
-              <select class="neighbour-select" name="three" id="three">
-                  <option value="die">die</option>
-                  <option value="live">live</option>
-                  <option value="born">born</option>
-              </select>
-            </div>
-            <div class="neighbour-div">
-              <label for="four" class="neighbour-label">4</label>
-              <select class="neighbour-select" name="four" id="four">
-                  <option value="die">die</option>
-                  <option value="live">live</option>
-                  <option value="born">born</option>
-              </select>
-            </div>
-            <div class="neighbour-div">
-              <label for="five" class="neighbour-label">5</label>
-              <select class="neighbour-select" name="five" id="five">
-                  <option value="die">die</option>
-                  <option value="live">live</option>
-                  <option value="born">born</option>
-              </select>
-            </div>
-          </div>
+        
+          
 
         <label class="setting-label" for="threadingCheckbox">Multithreading (experimental):</label>
         <input type="checkbox" id="threadingCheckbox" class="setting" onclick="toggleThreading()">

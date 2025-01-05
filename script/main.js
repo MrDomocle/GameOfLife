@@ -33,6 +33,10 @@ let survive = [false, false, true, true, false, false, false, false, false];
 let densityDefault = 0.25;
 let density = densityDefault;
 
+let bornIcon = "potted_plant";
+let surviveIcon = "recycling";
+let neutralIcon = "remove";
+
 let popNow = 0;
 let bornNow = 0;
 let popBuffer = 0;
@@ -93,6 +97,7 @@ window.addEventListener("keydown", handleKeyDown);
 let map;
 let map_prev;
 
+// debugging only
 let perfTimes = new Array();
 function printPerfTimes() {
     let total = 0;
@@ -132,6 +137,11 @@ class MapMatrix {
     setState(x, y, state) {
         this.array[x*this.ySize+y] = state ? 1 : 0;
     }
+    setStateSafe(x, y, state) {
+        if (x < this.xSize && y < this.ySize && x >= 0 && y >= 0) {
+            this.array[x*this.ySize+y] = state ? 1 : 0;
+        }
+    }
     setStateRaw(x, y, state) {
         this.array[x*this.ySize+y] = state;
     }
@@ -152,6 +162,14 @@ class MapMatrix {
         nbs += this.getStateRaw(x+1,y+1);
     
         return nbs
+    }
+    // takes a bool array (block) and its top-left offset
+    insertBlock(block, xStart,yStart) {
+        for (x = xStart; x < block.length+xStart; x++) {
+            for (y = yStart; y < block[0].length+yStart; y++) {
+                this.setStateSafe(x,y, block[x][y]);
+            }
+        }
     }
     
     resize(newX, newY) {
@@ -274,7 +292,6 @@ function initWorkers() {
     }
 }
 function startWorkers() {
-    let time1 = performance.now();
     for (i = 0; i < THREADS; i++) {
         if (!isFirstMultiTick) {
             tickWorkers[i].postMessage({ type: "tick", map: workerMapArrs[i].buffer }, [workerMapArrs[i].buffer]);
@@ -283,8 +300,6 @@ function startWorkers() {
         }
     }
     isFirstMultiTick = false;
-    let time = performance.now() - time1;
-    perfTimes.push(time);
 }
 function killWorkers() {
     for (i = 0; i < THREADS; i++) {
@@ -397,14 +412,15 @@ function redrawMap() {
         canvas.moveTo(mx_anchor+0.5, my_anchor+0.5);
         canvas.lineTo(mx+0.5,my+0.5);
         canvas.stroke();
-    
-        let xm = (mx_anchor+mx+1)/2;
-        let ym = (my_anchor+my+1)/2;
+        
+        let str = Math.sqrt(dx**2+dy**2).toFixed(1);
+        let textMetric = canvas.measureText(str);
+        let xm = (mx_anchor+mx-textMetric.width/2)/2;
+        let ym = (my_anchor+my-textMetric.fontBoundingBoxDescent/2)/2;
         
         canvas.beginPath();
         canvas.fillStyle = rulerBgColour;
-        let str = Math.sqrt(dx**2+dy**2).toFixed(1);
-        let textMetric = canvas.measureText(str);
+        
         let textRect = [xm-rulerFontMarginX, ym-textMetric.fontBoundingBoxAscent-rulerFontMarginY, textMetric.width+2*rulerFontMarginX, textMetric.fontBoundingBoxDescent*4+rulerFontMarginY];
         canvas.roundRect(textRect[0], textRect[1], textRect[2], textRect[3], 0.4);
         canvas.fill();
@@ -579,28 +595,91 @@ function updateDensity(val) {
 function updateBorn(n) {
     let currIcon = document.getElementById(n+"nbb").children[0].innerHTML;
     console.log(currIcon);
-    if (currIcon == "remove") {
-        document.getElementById(n+"nbb").children[0].innerHTML = "potted_plant";
+    if (currIcon == neutralIcon) {
+        document.getElementById(n+"nbb").children[0].innerHTML = bornIcon;
         born[n] = true;
-    } else if (currIcon == "potted_plant") {
-        document.getElementById(n+"nbb").children[0].innerHTML = "remove";
+    } else if (currIcon == bornIcon) {
+        document.getElementById(n+"nbb").children[0].innerHTML = neutralIcon;
         born[n] = false;
     }
     console.log(born);
+
+    updateRulestring()
 }
 function updateSurvive(n) {
     let currIcon = document.getElementById(n+"nbs").children[0].innerHTML;
     console.log(currIcon);
-    if (currIcon == "remove") {
-        document.getElementById(n+"nbs").children[0].innerHTML = "park";
+    if (currIcon == neutralIcon) {
+        document.getElementById(n+"nbs").children[0].innerHTML = surviveIcon;
         survive[n] = true;
-    } else if (currIcon == "park") {
-        document.getElementById(n+"nbs").children[0].innerHTML = "remove";
+    } else if (currIcon == surviveIcon) {
+        document.getElementById(n+"nbs").children[0].innerHTML = neutralIcon;
         survive[n] = false;
     }
     console.log(survive);
+
+    updateRulestring()
+}
+function updateRulestring() {
+    let bStr = "B";
+    let sStr = "S";
+    for (i = 0; i < 9; i++) {
+        if (born[i]) { bStr += i };
+        if (survive[i]) { sStr += i };
+    }
+    let str = bStr+"/"+sStr;
+    document.getElementById("rulestring-field").value = str;
+    document.getElementById("rulestring-field").blur();
+}
+function updateRuleButtons() {
+    for (i = 0; i < 9; i++) {
+        if (born[i]) {
+            document.getElementById(i+"nbb").children[0].innerHTML = bornIcon;
+        } else {
+            document.getElementById(i+"nbb").children[0].innerHTML = neutralIcon;
+        }
+
+        if (survive[i]) {
+            document.getElementById(i+"nbs").children[0].innerHTML = surviveIcon;
+        } else {
+            document.getElementById(i+"nbs").children[0].innerHTML = neutralIcon;
+        }
+    }
+
 }
 
+// Supported notations:
+// * Bxx/Sxx in any case, order and optional divider
+// * S/B (only numbers, any divider)
+function parseRulestring(str) {
+    let mode = "s";
+    let numbers = "012345678";
+    let isLabelless = numbers.includes(str.charAt(0));
+
+    born = Array(8).fill(false);
+    survive = Array(8).fill(false);
+
+    for (i = 0; i < str.length; i++) {
+        c = str.charAt(i);
+
+        if (numbers.includes(c)) {
+            if (mode == "b") {
+                born[parseInt(c)] = true;
+            } else if (mode == "s") {
+                survive[parseInt(c)] = true;
+            }
+        } else if (c.toLowerCase() == "b") {
+            mode = "b";
+        } else if (c.toLowerCase() == "s") {
+            mode = "s";
+        } else if (isLabelless) {
+            mode = "b"
+        }
+    }
+    console.log("NEW RULES: "+str, born, survive);
+    updateRuleButtons();
+    updateRulestring();
+}
 // MARK: Resize
 function handleResize() {
     clearInterval(drawTask);

@@ -75,23 +75,22 @@ body {
   }
   .rule-div {
     .setting-label {
-      display:block;
+      display: block;
       text-align: center;
     }
-    .control-button {
-      width: 50%;
-      height: 0%;
-      border-radius: 10px;
-      color: #e2e2e2;
-      
-      text-align: center;
+    .rule-label {
       display: inline-block;
-      font-size: 2px;
-      transition-duration: 40ms;
+      transform: translate(0,-85%)
+    }
+    .control-button {
+      width: 25px;
+      height: 25px;
+      border-radius: 7px;
+      color: #e2e2e2;
   
       .material-symbols-outlined {
-        font-size: 20px;
-        transform: translate(-10%,-18%);
+        font-size: 16px;
+        transform: translate(-33%,-66%);
       }
     }
   }

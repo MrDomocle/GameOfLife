@@ -12,7 +12,7 @@
       <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined&display=block" rel="stylesheet"/>
       <button class="control-button" onclick="randomiseMap()"><span class="material-symbols-outlined">ifl</span></button>
       <button class="control-button" onclick="clearMap()"><span class="material-symbols-outlined">ink_eraser</span></button>
-      <button class="control-button" id="pause_btn" onclick="toggle_pause()"><span class="material-symbols-outlined">pause</span></button>
+      <button class="control-button" onclick="toggle_pause()" id="pause_btn"><span class="material-symbols-outlined">pause</span></button>
       <button class="control-button" onclick="back_tick()"><span class="material-symbols-outlined">arrow_left_alt</span></button>
       <button class="control-button" onclick="tick()"><span class="material-symbols-outlined">arrow_right_alt</span></button>
     </div>
@@ -34,7 +34,7 @@
           <input type="range" id="densitySlider" class="setting" min="0" max="1" value="0.25" step="0.01" oninput="updateDensity(this.value)">
         <span class="setting-label">rules:</span>
         <div class="rule-div">
-          <div style="display: inline-block; transform: translate(0,-50%)"><b>B</b></div>
+          <div class="rule-label"><b>B</b></div>
           <span style="display: inline-block">
             <label class="setting-label" for="0nbb">0</label>
             <button class="control-button" id="0nbb" onclick="updateBorn(0)"><span class="material-symbols-outlined">remove</span></button>
@@ -73,7 +73,7 @@
           </span>
         </div>
         <div class="rule-div">
-          <div style="display: inline-block; transform: translate(0,-50%)"><b>S</b></div>
+          <div class="rule-label"><b>S</b></div>
           <span style="display: inline-block">
             <label class="setting-label" for="0nbs">0</label>
             <button class="control-button" id="0nbs" onclick="updateSurvive(0)"><span class="material-symbols-outlined">remove</span></button>
@@ -84,11 +84,11 @@
           </span>
           <span style="display: inline-block">
             <label class="setting-label" for="2nbs">2</label>
-            <button class="control-button" id="2nbs" onclick="updateSurvive(2)"><span class="material-symbols-outlined">park</span></button>
+            <button class="control-button" id="2nbs" onclick="updateSurvive(2)"><span class="material-symbols-outlined">recycling</span></button>
           </span>
           <span style="display: inline-block">
             <label class="setting-label" for="3nbs">3</label>
-            <button class="control-button" id="3nbs" onclick="updateSurvive(3)"><span class="material-symbols-outlined">park</span></button>
+            <button class="control-button" id="3nbs" onclick="updateSurvive(3)"><span class="material-symbols-outlined">recycling</span></button>
           </span>
           <span style="display: inline-block">
             <label class="setting-label" for="4nbs">4</label>
@@ -112,7 +112,7 @@
           </span>
         </div>
         <label class="setting-label" for="rulestring-field">rulestring:</label>
-          <input type="text" id="rulestring-field" value="B3/S12">
+          <input type="text" id="rulestring-field" placeholder="B3/S23" value="B3/S23" onchange="parseRulestring(this.value)">
         
 
         <div class="spacer"></div>

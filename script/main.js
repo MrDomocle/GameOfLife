@@ -93,6 +93,7 @@ let tpsTask = setInterval(recordTps, 1000);
 window.addEventListener("resize", handleResize);
 window.addEventListener("keyup", handleKeyUp);
 window.addEventListener("keydown", handleKeyDown);
+window.addEventListener("paste", handlePaste);
 
 let map;
 let map_prev;
@@ -163,14 +164,24 @@ class MapMatrix {
     
         return nbs
     }
-    // takes a bool array (block) and its top-left offset
-    insertBlock(block, xStart,yStart) {
-        for (x = xStart; x < block.length+xStart; x++) {
-            for (y = yStart; y < block[0].length+yStart; y++) {
-                this.setStateSafe(x,y, block[x][y]);
+    // takes a bool array (can be jagged) and its top-left offset
+    // can be set to not overwrite live cells with dead according to pattern
+    insertBlock(block, xStart, yStart, overwrite) {
+        console.log(xStart, yStart, block);
+        
+        for (let y = 0; y < block.length; y++) {
+            for (let x = 0; x < block[y].length; x++) {
+                if (!overwrite) {
+                    if (block[y][x]) {
+                        this.setStateSafe(xStart + x, yStart + y, true);
+                    }
+                } else {
+                    this.setStateSafe(xStart + x, yStart + y, block[y][x]);
+                }
             }
         }
     }
+    
     
     resize(newX, newY) {
         if (newX == this.xSize && newY == this.ySize) { return };
@@ -645,9 +656,11 @@ function updateRuleButtons() {
             document.getElementById(i+"nbs").children[0].innerHTML = neutralIcon;
         }
     }
-
 }
 
+// MARK: Parsers
+
+// Rulestring parser
 // Supported notations:
 // * Bxx/Sxx in any case, order and optional divider
 // * S/B (only numbers, any divider)
@@ -680,6 +693,147 @@ function parseRulestring(str) {
     updateRuleButtons();
     updateRulestring();
 }
+
+// Pattern parser
+function getPatternType(str) {
+    if (str.charAt(0) == "!") { return "plaintext" };
+    if (str.charAt(0) == "#") { return "rle" };
+    return "unknown"
+}
+function insertPattern(str) {
+    let type = getPatternType(str);
+    console.log(type);
+    let block;
+    if (type == "plaintext") {
+        block = parsePlaintext(str);
+    } else if (type == "rle") {
+        block = parseRle(str);
+    } else {
+        console.log("Not a valid pattern");
+    }
+    map.insertBlock(block, mx, my, true);
+}
+
+function parsePlaintext(str) {
+    let block = Array();
+    let workStr = str.split("\n");
+    let patStart = 0;
+
+    let xMax = 0;
+    let yMax = 0;
+    // 1st pass: count comment offset and maximum X length
+    for (line = 0; line < workStr.length; line++) {
+        // ignore comments and count how many lines of them there are
+        if (workStr[line].charAt(0) == "!") {
+            patStart++;
+            continue;
+        }
+        if (workStr[line].length > xMax) { xMax = workStr[line].length };
+    }
+    yMax = workStr.length-patStart;
+
+    // 2nd pass: constuct array
+    for (y = 0; y < yMax; y++) {
+        block.push(Array());
+        for (x = 0; x < xMax; x++) {
+            block[y].push(workStr[y+patStart].charAt(x) == "O");
+        }
+    }
+
+    return block;
+}
+function parseRleMeta(str) {
+    
+    let numbers = "0123456789";
+    let xMax;
+    let yMax;
+
+    let nowParsing = "";
+    let currNum = "";
+    let rulestring = "";
+    
+    for (c = 0; c < str.length; c++) {
+        let char = str.charAt(c);
+        // parse dimensions
+        if (char == "x") {
+            nowParsing = "x";
+            currNum = "";
+        }
+        if (char == "y") {
+            console.log(x);
+            nowParsing = "y";
+            currNum = "";
+        }
+        if (numbers.includes(char)) {
+            currNum += char;
+            if (nowParsing == "x") { xMax = parseInt(currNum) };
+            if (nowParsing == "y") { yMax = parseInt(currNum) };
+        }
+
+        // parse rules
+        if (char == "e") { // last character of "rule" in "rule = Bxx/Sxx"
+            nowParsing = "wait rule";
+            continue;
+        }
+        if (nowParsing == "wait rule") {
+            if (char == "B") {
+                rulestring += char;
+                nowParsing = "rule";
+                continue;
+            }
+        }
+        if (nowParsing == "rule") {
+            rulestring += char;
+        }
+    }
+    return [xMax, yMax, rulestring];
+}
+function parseRle(str) {
+    let block = Array();
+    let workStr = str.split("\n");
+    let patStart = 1; // add 1 to the offset because the dimension line isn't commented
+    let numbers = "0123456789";
+    
+    let runLength = 1;
+    let gotMeta = false;
+    let x = 0;
+    let y = 0;
+    let xMax;
+    let yMax;
+
+    for (line = 0; line < workStr.length; line++) {
+        // ignore comments and count how many lines of them there are
+        if (workStr[line].charAt(0) == "#") {
+            patStart++;
+            continue;
+        }
+
+        // parse size and rule on the first line after comments
+        if (!gotMeta) {
+            let boundingBox = parseRleMeta(workStr[line]);
+            gotMeta = true;
+            xMax = boundingBox[0];
+            yMax = boundingBox[1];
+            // rulestring
+            if (boundingBox[2] != "") {
+                parseRulestring(boundingBox[2]);
+            }
+            continue;
+        }
+
+        // parse actual pattern
+        block.push(Array(xMax).fill(false));
+        for (c = 0; c < workStr[line].length; c++) {
+            char = workStr[line].charAt(c);
+            if (char == "b") {
+                for (i = 0; i < runLength; i++) {
+                    block[x]
+                }
+            }
+        }
+    }
+}
+
 // MARK: Resize
 function handleResize() {
     clearInterval(drawTask);
@@ -735,6 +889,12 @@ function handleKeyDown(e) {
         recordAnchor();
         rulerActive = !rulerActive;
     }
+}
+function handlePaste(e) {
+    let str = e.clipboardData.getData("text");
+    console.log("PASTING PATTERN");
+    console.log(str);
+    insertPattern(str);
 }
 
 function toggleThreading() {

@@ -1,8 +1,84 @@
 let born;
 let survive;
 
+let bornNow;
+let popNow;
+
 let map_prev;
 let map;
+
+class MapMatrix {
+    array;
+    constructor(x, y) {
+        this.xSize = x;
+        this.ySize = y;
+        this.array = new Int8Array(x*y).fill(0);
+    }
+
+    getState(x, y) {
+        if (x < this.xSize && y < this.ySize && x >= 0 && y >= 0) {
+            return this.array[x*this.ySize+y]==1
+        } else {
+            return false;
+        }
+    }
+    getStateRaw(x, y) {
+        if (x < this.xSize && y < this.ySize && x >= 0 && y >= 0) {
+            return this.array[x*this.ySize+y]
+        } else {
+            return 0;
+        }
+    }
+    setState(x, y, state) {
+        this.array[x*this.ySize+y] = state ? 1 : 0;
+    }
+    setStateRaw(x, y, state) {
+        this.array[x*this.ySize+y] = state;
+    }
+
+    getNeighbours(x, y) {
+        let nbs = 0;
+
+        nbs += this.getStateRaw(x-1,y-1);
+        nbs += this.getStateRaw(x-1,y);
+        nbs += this.getStateRaw(x-1,y+1);
+
+        nbs += this.getStateRaw(x,y-1);
+        
+        nbs += this.getStateRaw(x,y+1);
+
+        nbs += this.getStateRaw(x+1,y-1);
+        nbs += this.getStateRaw(x+1,y);
+        nbs += this.getStateRaw(x+1,y+1);
+        return nbs
+    }
+
+    resize(newX, newY) {
+        if (newX == this.xSize && newY == this.ySize) { return };
+        // make new-sized array
+        let newArr = new Int8Array(newX*newY).fill(0);
+        // copy old values
+        for (x = 0; x < newX; x++) {
+            for (y = 0; y < newY; y++) {
+                newArr[x*newY+y] = this.array[x*this.ySize+y];
+            }
+        }
+        // replace old array
+        this.array = newArr;
+        this.xSize = newX;
+        this.ySize = newY;
+
+        // log change
+        if (!suppressResizeLog) {
+            console.log("Resize: ", old_map_size, "to", MAP_SIZE);
+            suppressResizeLog = true;
+            setTimeout(() => {suppressResizeLog = false}, 500);
+        }
+    }
+    clear() {
+        this.array = new Int8Array(this.xSize*this.ySize).fill(0);
+    }
+}
 
 let MAP_SIZE;
 let MAP_CHUNK_SIZE;
@@ -18,8 +94,12 @@ onmessage = (e) => {
     if (e.data.type == "init") {
         id = e.data.id;
 
-        map_prev = e.data.map_prev;
         MAP_SIZE = e.data.MAP_SIZE;
+        map_prev = new MapMatrix(MAP_SIZE[0], MAP_SIZE[1]);
+        map = new MapMatrix(MAP_SIZE[0], MAP_SIZE[1]);
+        
+        map_prev.array = new Int8Array(e.data.map_prev_arr);
+        map.array.set(map_prev.array);
         
         born = e.data.born;
         survive = e.data.survive;
@@ -28,14 +108,13 @@ onmessage = (e) => {
         yStart = e.data.yStart;
         xEnd = e.data.xEnd;
         yEnd = e.data.yEnd;
-        MAP_CHUNK_SIZE = [xEnd-xStart, yEnd-yStart];
-        //console.log(MAP_CHUNK_SIZE);
-        //console.log(MAP_SIZE);
-        //console.log(xStart);
-
-        initMap();
+        MAP_CHUNK_SIZE = [xEnd-xStart, yEnd-yStart];        
+    }
+    if (e.data.type == "first-tick") {
+        tick();
     }
     if (e.data.type == "tick") {
+        map.array = new Int8Array(e.data.map);
         tick();
     }
 }
@@ -44,66 +123,30 @@ function sendMapBack() {
         {
             type: "done",
             id: id,
-            map: map
-        }
+            map: map.array.buffer,
+            bornNow: bornNow,
+            popNow: popNow
+        }, [map.array.buffer]
     );
 }
 
-function initMap() {
-    map = Array(MAP_CHUNK_SIZE[0]).fill(false).map(() => Array(MAP_CHUNK_SIZE[1]).fill(false));
-    for (x = 0; x < MAP_CHUNK_SIZE[0]; x++) {
-        for (y = 0; y < MAP_CHUNK_SIZE[1]; y++) {
-            map[x][y] = map_prev[x+xStart][y+yStart];
-        }
-    }
-    console.log(map.length, map[0].length);
-}
-
 function mapToMapPrev() {
-    for (i = 0; i < MAP_CHUNK_SIZE[0]; i++) {
-        map_prev[i] = map[i].map((x) => x);
-    }
-    
-}
-
-// wrapper to convert global coordinates to chunk coordinates
-function getState(x,y) {
-    let rx = x-xStart;
-    let ry = y-yStart;
-    if (rx < MAP_CHUNK_SIZE[0] && ry < MAP_CHUNK_SIZE[1] && rx >= 0 && ry >= 0) {
-        return map_prev[rx][ry];
-    }
-    return false;
-}
-// returns the number of moore neighbours of the cell at x,y
-function countNeighbours(x,y) {
-    nbs = 0;
-
-    nbs += (getState(x-1,y-1)) ? 1 : 0;
-    nbs += (getState(x,y-1)) ? 1 : 0;
-    nbs += (getState(x+1,y-1)) ? 1 : 0;
-
-    nbs += (getState(x-1,y)) ? 1 : 0;
-
-    nbs += (getState(x+1,y)) ? 1 : 0;
-
-    nbs += (getState(x-1,y+1)) ? 1 : 0;
-    nbs += (getState(x,y+1)) ? 1 : 0;
-    nbs += (getState(x+1,y+1)) ? 1 : 0;
-
-    return nbs
+    map_prev.array.set(map.array);
 }
 function updateState(x,y) {
-    nbs = countNeighbours(x,y);
-    if (getState(x,y)) {
+    nbs = map_prev.getNeighbours(x,y);
+    if (map_prev.getState(x,y)) {
         // if alive, check survival
         if (survive[nbs]) {
+            popNow++;
             return true;
         } else {
             return false;
         }
     } else if (born[nbs]) {
         // else, check born
+        bornNow++;
+        popNow++;
         return true;
     }
     // otherwise, cell remains dead
@@ -111,11 +154,12 @@ function updateState(x,y) {
 }
 
 function tick() {
+    bornNow = 0;
+    popNow = 0;
     mapToMapPrev();
     for (x = xStart; x < xEnd; x++) {
         for (y = yStart; y < yEnd; y++) {
-            let state = updateState(x,y)
-            map[x-xStart][y-yStart] = state;
+            map.setState(x,y, updateState(x,y));
         }
     }
     sendMapBack();

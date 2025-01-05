@@ -10,11 +10,11 @@
   <body>
     <div class="controls">
       <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined&display=block" rel="stylesheet"/>
-      <button class="button1" onclick="randomiseMap()"><span class="material-symbols-outlined">ifl</span></button>
-      <button class="button1" onclick="clearMap()"><span class="material-symbols-outlined">ink_eraser</span></button>
-      <button class="button1" id="pause_btn" onclick="toggle_pause()"><span class="material-symbols-outlined">pause</span></button>
-      <button class="button1" onclick="back_tick()"><span class="material-symbols-outlined">arrow_left_alt</span></button>
-      <button class="button1" onclick="tick()"><span class="material-symbols-outlined">arrow_right_alt</span></button>
+      <button class="control-button" onclick="randomiseMap()"><span class="material-symbols-outlined">ifl</span></button>
+      <button class="control-button" onclick="clearMap()"><span class="material-symbols-outlined">ink_eraser</span></button>
+      <button class="control-button" id="pause_btn" onclick="toggle_pause()"><span class="material-symbols-outlined">pause</span></button>
+      <button class="control-button" onclick="back_tick()"><span class="material-symbols-outlined">arrow_left_alt</span></button>
+      <button class="control-button" onclick="tick()"><span class="material-symbols-outlined">arrow_right_alt</span></button>
     </div>
     <div class="container">
       <canvas id="screen" class="gamearea" oncontextmenu="return false;" onselect="return false;" onmousedown="handleMDown(event)" onmouseup="handleMUp(event)" onmousemove="getMousePos(event)" onmouseleave="handleMLeave()"></canvas>
@@ -32,14 +32,91 @@
           <input type="range" id="cellSizeSlider" class="setting" min="1" max="32" value="8" step="1" oninput="updateCellSize(this.value)" onchange="applyCellSize(this.value)">
         <label class="setting-label" for="densitySlider">randomiser density: <span id="densityText">0.25 (default)</span></label>
           <input type="range" id="densitySlider" class="setting" min="0" max="1" value="0.25" step="0.01" oninput="updateDensity(this.value)">
+        <span class="setting-label">rules:</span>
+        <div class="rule-div">
+          <div style="display: inline-block; transform: translate(0,-50%)"><b>B</b></div>
+          <span style="display: inline-block">
+            <label class="setting-label" for="0nbb">0</label>
+            <button class="control-button" id="0nbb" onclick="updateBorn(0)"><span class="material-symbols-outlined">remove</span></button>
+          </span>
+          <span style="display: inline-block">
+            <label class="setting-label" for="1nbb">1</label>
+            <button class="control-button" id="1nbb" onclick="updateBorn(1)"><span class="material-symbols-outlined">remove</span></button>
+          </span>
+          <span style="display: inline-block">
+            <label class="setting-label" for="2nbb">2</label>
+            <button class="control-button" id="2nbb" onclick="updateBorn(2)"><span class="material-symbols-outlined">remove</span></button>
+          </span>
+          <span style="display: inline-block">
+            <label class="setting-label" for="3nbb">3</label>
+            <button class="control-button" id="3nbb" onclick="updateBorn(3)"><span class="material-symbols-outlined">potted_plant</span></button>
+          </span>
+          <span style="display: inline-block">
+            <label class="setting-label" for="4nbb">4</label>
+            <button class="control-button" id="4nbb" onclick="updateBorn(4)"><span class="material-symbols-outlined">remove</span></button>
+          </span>
+          <span style="display: inline-block">
+            <label class="setting-label" for="5nbb">5</label>
+            <button class="control-button" id="5nbb" onclick="updateBorn(5)"><span class="material-symbols-outlined">remove</span></button>
+          </span>
+          <span style="display: inline-block">
+            <label class="setting-label" for="6nbb">6</label>
+            <button class="control-button" id="6nbb" onclick="updateBorn(6)"><span class="material-symbols-outlined">remove</span></button>
+          </span>
+          <span style="display: inline-block">
+            <label class="setting-label" for="7nbb">7</label>
+            <button class="control-button" id="7nbb" onclick="updateBorn(7)"><span class="material-symbols-outlined">remove</span></button>
+          </span>
+          <span style="display: inline-block">
+            <label class="setting-label" for="8nbb">8</label>
+            <button class="control-button" id="8nbb" onclick="updateBorn(8)"><span class="material-symbols-outlined">remove</span></button>
+          </span>
+        </div>
+        <div class="rule-div">
+          <div style="display: inline-block; transform: translate(0,-50%)"><b>S</b></div>
+          <span style="display: inline-block">
+            <label class="setting-label" for="0nbs">0</label>
+            <button class="control-button" id="0nbs" onclick="updateSurvive(0)"><span class="material-symbols-outlined">remove</span></button>
+          </span>
+          <span style="display: inline-block">
+            <label class="setting-label" for="1nbs">1</label>
+            <button class="control-button" id="1nbs" onclick="updateSurvive(1)"><span class="material-symbols-outlined">remove</span></button>
+          </span>
+          <span style="display: inline-block">
+            <label class="setting-label" for="2nbs">2</label>
+            <button class="control-button" id="2nbs" onclick="updateSurvive(2)"><span class="material-symbols-outlined">park</span></button>
+          </span>
+          <span style="display: inline-block">
+            <label class="setting-label" for="3nbs">3</label>
+            <button class="control-button" id="3nbs" onclick="updateSurvive(3)"><span class="material-symbols-outlined">park</span></button>
+          </span>
+          <span style="display: inline-block">
+            <label class="setting-label" for="4nbs">4</label>
+            <button class="control-button" id="4nbs" onclick="updateSurvive(4)"><span class="material-symbols-outlined">remove</span></button>
+          </span>
+          <span style="display: inline-block">
+            <label class="setting-label" for="5nbs">5</label>
+            <button class="control-button" id="5nbs" onclick="updateSurvive(5)"><span class="material-symbols-outlined">remove</span></button>
+          </span>
+          <span style="display: inline-block">
+            <label class="setting-label" for="6nbs">6</label>
+            <button class="control-button" id="6nbs" onclick="updateSurvive(6)"><span class="material-symbols-outlined">remove</span></button>
+          </span>
+          <span style="display: inline-block">
+            <label class="setting-label" for="7nbs">7</label>
+            <button class="control-button" id="7nbs" onclick="updateSurvive(7)"><span class="material-symbols-outlined">remove</span></button>
+          </span>
+          <span style="display: inline-block">
+            <label class="setting-label" for="8nbs">8</label>
+            <button class="control-button" id="8nbs" onclick="updateSurvive(8)"><span class="material-symbols-outlined">remove</span></button>
+          </span>
+        </div>
+        <label class="setting-label" for="rulestring-field">rulestring:</label>
+          <input type="text" id="rulestring-field" value="B3/S12">
         
-          
-
-        <label class="setting-label" for="threadingCheckbox">Multithreading (experimental):</label>
-        <input type="checkbox" id="threadingCheckbox" class="setting" onclick="toggleThreading()">
 
         <div class="spacer"></div>
-        <span class="data_disp", id="data_text">tps: 0</span>
+        <span class="data_disp", id="data_text"></span>
       </div>
     </div>
     <script type="text/javascript" src="script/main.js">  </script>

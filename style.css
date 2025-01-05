@@ -44,11 +44,11 @@ body {
     border-radius: 2.8px;
   }
   
-  .button1 {
+  .control-button {
     background-color: #101142;
     border: none;
-    width: 1.5cm;
-    height: 1.5cm;
+    width: 55px;
+    height: 55px;
     border-radius: 10px;
     color: #e2e2e2;
     padding: 10px 10px;
@@ -56,8 +56,12 @@ body {
     display: inline-block;
     font-size: 24px;
     transition-duration: 40ms;
+
+    .material-symbols-outlined {
+      transform: translate(0,15%);
+    }
   }
-  .button1:active {
+  .control-button:active {
     transition-duration: 40ms;
     background-color: #4044bb
   }
@@ -69,22 +73,27 @@ body {
     justify-self: flex-start;
     accent-color: #e2e2e2; 
   }
-  .neighbour-div {
-    display: inline-flex;
-    flex-direction: column;
-    align-content: center;
-  }
-  .neighbour-label {
-    align-self: center;
-  }
-  .neighbour-select {
-    background:#161616;
-    color: #e2e2e2;
-    border: none;
-    border-radius: 5px;
-    width: 35px;
-    height: 35px;
-    
+  .rule-div {
+    .setting-label {
+      display:block;
+      text-align: center;
+    }
+    .control-button {
+      width: 50%;
+      height: 0%;
+      border-radius: 10px;
+      color: #e2e2e2;
+      
+      text-align: center;
+      display: inline-block;
+      font-size: 2px;
+      transition-duration: 40ms;
+  
+      .material-symbols-outlined {
+        font-size: 20px;
+        transform: translate(-10%,-18%);
+      }
+    }
   }
 
   .spacer {
@@ -94,9 +103,5 @@ body {
     font-size: 12px;
     justify-self: flex-end;
     text-align: right;
-  }
-
-  .material-symbols-outlined {
-    transform: translate(0,12%);
   }
 }

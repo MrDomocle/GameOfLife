@@ -9,26 +9,34 @@ let MAP_SIZE = [Math.round((canvasElement.clientWidth-40)/cell_size), Math.round
 let old_map_size = [MAP_SIZE[0], MAP_SIZE[1]];
 
 let cellFillStyle = "white";
-let rulerStrokeStyle = "lightcoral";
-let rulerStrokeWidth = 0.25;
-let rulerFontStyle = "px Courier New";
+let rulerStrokeStyle = "#4044bb";
+let rulerStrokeWidth = 1.5;
+let rulerFontStyle1 = "bold ";
+let rulerFontStyle2 = "px Courier New";
+let rulerFontMarginX = 0.5;
+let rulerFontMarginY = 0.5;
 let rulerFontSize = 18;
-let rulerFontColour = "crimson";
-let rulerBgColour = "black";
+let rulerFontColour = "#4044bb";
+let rulerBgColour = "rgba(184, 185, 218, 0.9)";
 
 canvasElement.width = MAP_SIZE[0]*cell_size;
 canvasElement.height = MAP_SIZE[1]*cell_size;
 canvas.scale(cell_size,cell_size);
 canvas.fillStyle = cellFillStyle;
 canvas.strokeStyle = rulerStrokeStyle;
-canvas.lineWidth = rulerStrokeWidth;
-canvas.font = rulerFontSize/cell_size + rulerFontStyle;
+canvas.lineWidth = rulerStrokeWidth/cell_size;
+canvas.font = rulerFontStyle1 + rulerFontSize/cell_size + rulerFontStyle2;
 
 // index in rule arrays is the number of neighbours
 let born = [false, false, false, true, false, false, false, false, false];
 let survive = [false, false, true, true, false, false, false, false, false];
 let densityDefault = 0.25;
 let density = densityDefault;
+
+let popNow = 0;
+let bornNow = 0;
+let popBuffer = 0;
+let bornBuffer = 0;
 
 let tickRateDefault = 20;
 let tickRate = tickRateDefault;
@@ -50,9 +58,10 @@ let yThreadSize = Math.floor(MAP_SIZE[1] / THREADS_Y);
 
 let doThreads = false;
 let tickWorkers = Array(THREADS);
-let workerMaps = Array(THREADS);
+let workerMapArrs = Array(THREADS);
 let activeWorkers = 0;
 let isWorking = false;
+let isFirstMultiTick = true;
 
 let paused = false;
 let m1down = false;
@@ -84,13 +93,26 @@ window.addEventListener("keydown", handleKeyDown);
 let map;
 let map_prev;
 
+let perfTimes = new Array();
+function printPerfTimes() {
+    let total = 0;
+    let min = perfTimes[0];
+    let max = perfTimes[0];
+    perfTimes.forEach( (t) => {
+        if (t < min) { min = t };
+        if (t > max) { max = t };
+        total += t;
+    });
+    console.log("avg: "+total/perfTimes.length+"; min: "+min+"; max: "+max);
+    perfTimes = new Array();
+}
+
 class MapMatrix {
     array;
     constructor(x, y) {
         this.xSize = x;
         this.ySize = y;
         this.array = new Int8Array(x*y).fill(0);
-        console.log(this.xSize,this.ySize);
     }
 
     getState(x, y) {
@@ -100,7 +122,7 @@ class MapMatrix {
             return false;
         }
     }
-    getStateNum(x, y) {
+    getStateRaw(x, y) {
         if (x < this.xSize && y < this.ySize && x >= 0 && y >= 0) {
             return this.array[x*this.ySize+y]
         } else {
@@ -110,25 +132,28 @@ class MapMatrix {
     setState(x, y, state) {
         this.array[x*this.ySize+y] = state ? 1 : 0;
     }
+    setStateRaw(x, y, state) {
+        this.array[x*this.ySize+y] = state;
+    }
 
     getNeighbours(x, y) {
         let nbs = 0;
 
-        nbs += this.getStateNum(x-1,y-1);
-        nbs += this.getStateNum(x-1,y);
-        nbs += this.getStateNum(x-1,y+1);
+        nbs += this.getStateRaw(x-1,y-1);
+        nbs += this.getStateRaw(x-1,y);
+        nbs += this.getStateRaw(x-1,y+1);
 
-        nbs += this.getStateNum(x,y-1);
+        nbs += this.getStateRaw(x,y-1);
         
-        nbs += this.getStateNum(x,y+1);
+        nbs += this.getStateRaw(x,y+1);
 
-        nbs += this.getStateNum(x+1,y-1);
-        nbs += this.getStateNum(x+1,y);
-        nbs += this.getStateNum(x+1,y+1);
+        nbs += this.getStateRaw(x+1,y-1);
+        nbs += this.getStateRaw(x+1,y);
+        nbs += this.getStateRaw(x+1,y+1);
     
         return nbs
     }
-
+    
     resize(newX, newY) {
         if (newX == this.xSize && newY == this.ySize) { return };
         // make new-sized array
@@ -167,10 +192,15 @@ function initMap() {
     map = new MapMatrix(MAP_SIZE[0], MAP_SIZE[1]);
     map_prev = new MapMatrix(MAP_SIZE[0], MAP_SIZE[1]);
 }
+function initWorkerMaps() {
+    for (i = 0; i < THREADS; i++) {
+        workerMapArrs[i] = new Int8Array(MAP_SIZE[0]*MAP_SIZE[1]);
+        workerMapArrs[i].set(map_prev.array);
+    }
+}
 
 function mapToMapPrev() {
     map_prev.array.set(map.array);
-    
 }
 function mapPrevToMap() {
     map.array.set(map_prev.array);
@@ -217,18 +247,19 @@ function getWorkerOffsets(i) {
     };
 }
 function initWorkers() {
+    initWorkerMaps();
     for (i = 0; i < THREADS; i++) {
         tickWorkers[i] = new Worker("script/tick-worker.js");
         // get map offsets of this worker
         offsets = getWorkerOffsets(i);
-
+        
         tickWorkers[i].postMessage(
             {
                 type: "init",
 
                 id: i,
                 
-                map_prev: map_prev,
+                map_prev_arr: workerMapArrs[i].buffer,
                 MAP_SIZE: MAP_SIZE,
                 born: born,
                 survive: survive,
@@ -240,25 +271,37 @@ function initWorkers() {
             }
         );
         tickWorkers[i].onmessage = (e) => { handleWorkerMessage(e) };
-        console.log("init worker", i)
     }
 }
 function startWorkers() {
+    let time1 = performance.now();
     for (i = 0; i < THREADS; i++) {
-        tickWorkers[i].postMessage({ type: "tick" });
+        if (!isFirstMultiTick) {
+            tickWorkers[i].postMessage({ type: "tick", map: workerMapArrs[i].buffer }, [workerMapArrs[i].buffer]);
+        } else {
+            tickWorkers[i].postMessage({ type: "first-tick" });
+        }
     }
+    isFirstMultiTick = false;
+    let time = performance.now() - time1;
+    perfTimes.push(time);
 }
 function killWorkers() {
     for (i = 0; i < THREADS; i++) {
         tickWorkers[i].terminate();
     }
     activeWorkers = 0;
+    isFirstMultiTick = true;
 }
 // MARK: tick coordination
 function tick() {
+    bornBuffer = 0;
+    popBuffer = 0;
     mapToMapPrev();
     if (doThreads) {
         if (activeWorkers != 0) { return };
+        // make sure all workers have correct map_prev
+        initWorkerMaps();
         // start workers
         startWorkers();
         activeWorkers = THREADS;
@@ -266,27 +309,29 @@ function tick() {
     } else { localtick(); }
     ticksThisSecond++;
 }
-function concatWorkerMaps() {
+function concatworkerMapArrs() {
     for (i = 0; i < THREADS; i++) {
-            let offsets = getWorkerOffsets(i);
-            for (x = 0; x < offsets.xEnd-offsets.xStart; x++) {
-                for (y = 0; y < offsets.yEnd-offsets.yStart; y++) {
-                    let state = false;
-
-                    if (workerMaps[i][x][y]) { state = true };
-
-                    map[x+offsets.xStart][y+offsets.yStart] = state;
-                }
+        let offsets = getWorkerOffsets(i);
+        for (x = offsets.xStart; x < offsets.xEnd; x++) {
+            let ix = x*MAP_SIZE[1];
+            for (y = offsets.yStart; y < offsets.yEnd; y++) {
+                map.array[ix+y] =  workerMapArrs[i][ix+y];
             }
-            
+        }
     }
 }
 function handleWorkerMessage(e) {
     if (e.data.type == "done") {
         activeWorkers--;
-        workerMaps[e.data.id] = e.data.map;
+        workerMapArrs[e.data.id] = new Int8Array(e.data.map);
+        popBuffer += e.data.popNow;
+        bornBuffer += e.data.bornNow;
         if (activeWorkers == 0) {
-            concatWorkerMaps();
+            popNow = popBuffer;
+            bornNow = bornBuffer;
+            popBuffer = 0;
+            bornBuffer = 0;
+            concatworkerMapArrs();
         }
     }
     
@@ -297,12 +342,15 @@ function updateState(x,y) {
     if (map_prev.getState(x,y)) {
         // if alive, check survival
         if (survive[nbs]) {
+            popBuffer++;
             return true;
         } else {
             return false;
         }
     } else if (born[nbs]) {
         // else, check born
+        bornBuffer++;
+        popBuffer++;
         return true;
     }
     // otherwise, cell remains dead
@@ -322,6 +370,10 @@ function localtick() {
         }
     }
     isWorking = false;
+    popNow = popBuffer;
+    bornNow = bornBuffer;
+    popBuffer = 0;
+    bornBuffer = 0;
 }
 
 // MARK: Drawing
@@ -353,7 +405,7 @@ function redrawMap() {
         canvas.fillStyle = rulerBgColour;
         let str = Math.sqrt(dx**2+dy**2).toFixed(1);
         let textMetric = canvas.measureText(str);
-        let textRect = [xm, ym-textMetric.fontBoundingBoxAscent, textMetric.width, textMetric.fontBoundingBoxDescent*4];
+        let textRect = [xm-rulerFontMarginX, ym-textMetric.fontBoundingBoxAscent-rulerFontMarginY, textMetric.width+2*rulerFontMarginX, textMetric.fontBoundingBoxDescent*4+rulerFontMarginY];
         canvas.roundRect(textRect[0], textRect[1], textRect[2], textRect[3], 0.4);
         canvas.fill();
 
@@ -377,7 +429,10 @@ function clearScreen() {
 function showData() {
     let str = "";
     updateRuler();
-    str += "x: " + mx;
+    str += "p: " + popNow;
+    str += "; b: " + bornNow;
+
+    str += "; x: " + mx;
     str += "; y: " + my;
 
     str += "; tps: " + tps;
@@ -520,6 +575,32 @@ function updateDensity(val) {
     }
 }
 
+// MARK: Rules
+function updateBorn(n) {
+    let currIcon = document.getElementById(n+"nbb").children[0].innerHTML;
+    console.log(currIcon);
+    if (currIcon == "remove") {
+        document.getElementById(n+"nbb").children[0].innerHTML = "potted_plant";
+        born[n] = true;
+    } else if (currIcon == "potted_plant") {
+        document.getElementById(n+"nbb").children[0].innerHTML = "remove";
+        born[n] = false;
+    }
+    console.log(born);
+}
+function updateSurvive(n) {
+    let currIcon = document.getElementById(n+"nbs").children[0].innerHTML;
+    console.log(currIcon);
+    if (currIcon == "remove") {
+        document.getElementById(n+"nbs").children[0].innerHTML = "park";
+        survive[n] = true;
+    } else if (currIcon == "park") {
+        document.getElementById(n+"nbs").children[0].innerHTML = "remove";
+        survive[n] = false;
+    }
+    console.log(survive);
+}
+
 // MARK: Resize
 function handleResize() {
     clearInterval(drawTask);
@@ -532,10 +613,10 @@ function handleResize() {
     canvas.scale(cell_size,cell_size);
     canvas.fillStyle = cellFillStyle;
     canvas.strokeStyle = rulerStrokeStyle;
-    canvas.lineWidth = rulerStrokeWidth;
-    canvas.font = rulerFontSize/cell_size + rulerFontStyle;
+    canvas.lineWidth = rulerStrokeWidth/cell_size;
+    canvas.font = rulerFontStyle1 + rulerFontSize/cell_size + rulerFontStyle2;
     
-    // apply to map array
+    // apply to map
     map.resize(MAP_SIZE[0], MAP_SIZE[1]);
     map_prev.resize(MAP_SIZE[0], MAP_SIZE[1]);
 
@@ -544,53 +625,6 @@ function handleResize() {
         initWorkers();
     }
     drawTask = setInterval(redrawMap, frameInterval);
-}
-// explands / shrinks the map
-function resizeMap() {
-    if (old_map_size[0] == MAP_SIZE[0] && old_map_size[1] == MAP_SIZE[1]) { return };
-    // Expand
-    if (old_map_size[0] < MAP_SIZE[0]) {
-        // expand x direction
-        for (x = old_map_size[0]; x < MAP_SIZE[0]; x++) {
-            map.push(Array(MAP_SIZE[1]));
-            map[x].fill(false);
-        }
-    }
-
-    if (old_map_size[1] < MAP_SIZE[1]) {
-        // expand y direction
-        for (x = 0; x < MAP_SIZE[0]; x++) {
-            for (y = old_map_size[1]; y < MAP_SIZE[1]; y++) {
-                map[x].push(false);
-            }
-        }
-    }  
-    // Shrink
-    if (old_map_size[0] > MAP_SIZE[0]) {
-        // shrink x direction
-        for (x = MAP_SIZE[0]; x > old_map_size[0]; x--) {
-            map.pop();
-        }
-    }
-
-    if (old_map_size[1] > MAP_SIZE[1]) {
-        // shrink y direction
-        for (x = 0; x < MAP_SIZE[0]; x++) {
-            for (y = MAP_SIZE[1]; y > old_map_size[1]; y--) {
-                map[x].pop();
-            }
-        }
-    }
-    
-    map_prev = map.map((x) => x);
-    
-    // log change
-    if (!suppressResizeLog) {
-        console.log("Resize: ", old_map_size, "to", MAP_SIZE);
-        suppressResizeLog = true;
-        setTimeout(() => {suppressResizeLog = false}, 500);
-    }
-    
 }
 
 // MARK: Keys
@@ -628,8 +662,10 @@ function toggleThreading() {
     doThreads = !doThreads;
     if (doThreads) {
         initWorkers();
+        console.log("Threading ON");
     } else {
         killWorkers();
+        console.log("Threading OFF");
     }
 }
 // MARK: Pause

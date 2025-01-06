@@ -742,6 +742,7 @@ function parsePlaintext(str) {
 
     return block;
 }
+// MARK: rle
 function parseRleMeta(str) {
     
     let numbers = "0123456789";
@@ -791,20 +792,22 @@ function parseRleMeta(str) {
 function parseRle(str) {
     let block = Array();
     let workStr = str.split("\n");
-    let patStart = 1; // add 1 to the offset because the dimension line isn't commented
+    let patStart = 0;
     let numbers = "0123456789";
     
+    // RLE parser working vars
     let runLength = 1;
+    let mapX = 0;
+    let mapY = 0;
+    let parsingRunLength = "";
     let gotMeta = false;
-    let x = 0;
-    let y = 0;
+
     let xMax;
     let yMax;
 
     for (line = 0; line < workStr.length; line++) {
         // ignore comments and count how many lines of them there are
         if (workStr[line].charAt(0) == "#") {
-            patStart++;
             continue;
         }
 
@@ -818,20 +821,51 @@ function parseRle(str) {
             if (boundingBox[2] != "") {
                 parseRulestring(boundingBox[2]);
             }
+            block.push(Array());
+            console.log(boundingBox);
             continue;
         }
 
         // parse actual pattern
-        block.push(Array(xMax).fill(false));
         for (c = 0; c < workStr[line].length; c++) {
             char = workStr[line].charAt(c);
-            if (char == "b") {
+            if (char == "b") { // fill dead cell
+                parsingRunLength = "";
                 for (i = 0; i < runLength; i++) {
-                    block[x]
+                    block[mapY].push(false);
                 }
+                runLength = 1;
+            } else if (char == "o") { // fill live cell
+                parsingRunLength = "";
+                for (i = 0; i < runLength; i++) {
+                    block[mapY].push(true);
+                }
+                runLength = 1;
+            } else if (numbers.includes(char)) {
+                parsingRunLength += char;
+                runLength = parseInt(parsingRunLength);
+                console.log(parsingRunLength, runLength)
+            } else if (char == "$") { // EOL
+                for (i = block[mapY].length; i < xMax; i++) { // fill unspecified values with false
+                    block[mapY].push(false);
+                }
+                mapY++;
+                parsingRunLength = "";
+                runLength = 1;
+                block.push(Array());
+            } else if (char == "!") { // EOF
+                for (i = block[mapY].length; i < xMax; i++) { // fill unspecified values with false
+                    block[mapY].push(false);
+                }
+                mapY++;
+                parsingRunLength = "";
+                runLength = 1;
+                break;
             }
         }
     }
+    console.log(block);
+    return block;
 }
 
 // MARK: Resize

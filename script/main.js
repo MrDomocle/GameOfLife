@@ -773,7 +773,7 @@ function parseRleMeta(str) {
             continue;
         }
         if (nowParsing == "wait rule") {
-            if (char == "B") {
+            if (char == "B" || numbers.includes(char)) {
                 rulestring += char;
                 nowParsing = "rule";
                 continue;
@@ -818,7 +818,6 @@ function parseRle(str) {
                 parseRulestring(boundingBox[2]);
             }
             block.push(Array());
-            console.log("Meta:", boundingBox);
             continue;
         }
 
@@ -842,7 +841,6 @@ function parseRle(str) {
                 runLength = parseInt(parsingRunLength);
             } else if (char == "$") { // EOL
                 // skip runLength lines
-                console.log("skip", runLength)
                 for (i = 0; i < runLength; i++) {
                     for (j = block[mapY].length; j < xMax; j++) {
                         block[mapY].push(false);

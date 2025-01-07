@@ -166,9 +166,7 @@ class MapMatrix {
     }
     // takes a bool array (can be jagged) and its top-left offset
     // can be set to not overwrite live cells with dead according to pattern
-    insertBlock(block, xStart, yStart, overwrite) {
-        console.log(xStart, yStart, block);
-        
+    insertBlock(block, xStart, yStart, overwrite) {        
         for (let y = 0; y < block.length; y++) {
             for (let x = 0; x < block[y].length; x++) {
                 if (!overwrite) {
@@ -605,7 +603,6 @@ function updateDensity(val) {
 // MARK: Rules
 function updateBorn(n) {
     let currIcon = document.getElementById(n+"nbb").children[0].innerHTML;
-    console.log(currIcon);
     if (currIcon == neutralIcon) {
         document.getElementById(n+"nbb").children[0].innerHTML = bornIcon;
         born[n] = true;
@@ -613,7 +610,6 @@ function updateBorn(n) {
         document.getElementById(n+"nbb").children[0].innerHTML = neutralIcon;
         born[n] = false;
     }
-    console.log(born);
 
     updateRulestring()
 }
@@ -627,7 +623,6 @@ function updateSurvive(n) {
         document.getElementById(n+"nbs").children[0].innerHTML = neutralIcon;
         survive[n] = false;
     }
-    console.log(survive);
 
     updateRulestring()
 }
@@ -689,15 +684,16 @@ function parseRulestring(str) {
             mode = "b"
         }
     }
-    console.log("NEW RULES: "+str, born, survive);
+    console.log("NEW RULES: "+str);
     updateRuleButtons();
     updateRulestring();
 }
 
 // Pattern parser
 function getPatternType(str) {
-    if (str.charAt(0) == "!") { return "plaintext" };
-    if (str.charAt(0) == "#") { return "rle" };
+    let c0 = str.charAt(0);
+    if (c0 == "!" || c0 == ".") { return "plaintext" };
+    if (c0 == "#" || c0 == "x") { return "rle" };
     return "unknown"
 }
 function insertPattern(str) {
@@ -709,7 +705,8 @@ function insertPattern(str) {
     } else if (type == "rle") {
         block = parseRle(str);
     } else {
-        console.log("Not a valid pattern");
+        console.log("Not a recognised pattern");
+        return;
     }
     map.insertBlock(block, mx, my, true);
 }
@@ -761,7 +758,6 @@ function parseRleMeta(str) {
             currNum = "";
         }
         if (char == "y") {
-            console.log(x);
             nowParsing = "y";
             currNum = "";
         }
@@ -822,7 +818,7 @@ function parseRle(str) {
                 parseRulestring(boundingBox[2]);
             }
             block.push(Array());
-            console.log(boundingBox);
+            console.log("Meta:", boundingBox);
             continue;
         }
 
@@ -841,20 +837,24 @@ function parseRle(str) {
                     block[mapY].push(true);
                 }
                 runLength = 1;
-            } else if (numbers.includes(char)) {
+            } else if (numbers.includes(char)) { // parse run length
                 parsingRunLength += char;
                 runLength = parseInt(parsingRunLength);
-                console.log(parsingRunLength, runLength)
             } else if (char == "$") { // EOL
-                for (i = block[mapY].length; i < xMax; i++) { // fill unspecified values with false
-                    block[mapY].push(false);
+                // skip runLength lines
+                console.log("skip", runLength)
+                for (i = 0; i < runLength; i++) {
+                    for (j = block[mapY].length; j < xMax; j++) {
+                        block[mapY].push(false);
+                    }
+                    // increment line counter and add new line to block
+                    mapY++;
+                    block.push(Array());
                 }
-                mapY++;
                 parsingRunLength = "";
                 runLength = 1;
-                block.push(Array());
             } else if (char == "!") { // EOF
-                for (i = block[mapY].length; i < xMax; i++) { // fill unspecified values with false
+                for (i = block[mapY].length; i < xMax; i++) { // end line
                     block[mapY].push(false);
                 }
                 mapY++;
@@ -864,7 +864,6 @@ function parseRle(str) {
             }
         }
     }
-    console.log(block);
     return block;
 }
 

@@ -10,14 +10,14 @@
   <body>
     <div class="controls">
       <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined&display=block" rel="stylesheet"/>
-      <button class="control-button" onclick="randomiseMap()"><span class="material-symbols-outlined">ifl</span></button>
-      <button class="control-button" onclick="clearMap()"><span class="material-symbols-outlined">ink_eraser</span></button>
-      <button class="control-button" onclick="toggle_pause()" id="pause_btn"><span class="material-symbols-outlined">pause</span></button>
-      <button class="control-button" onclick="back_tick()"><span class="material-symbols-outlined">arrow_left_alt</span></button>
-      <button class="control-button" onclick="tick()"><span class="material-symbols-outlined">arrow_right_alt</span></button>
+      <button class="control-button" title="Randomise" onclick="randomiseMap()"><span class="material-symbols-outlined">ifl</span></button>
+      <button class="control-button" title="Clear" onclick="clearMap()"><span class="material-symbols-outlined">ink_eraser</span></button>
+      <button class="control-button" title="Play/Pause" onclick="toggle_pause()" id="pause_btn"><span class="material-symbols-outlined">pause</span></button>
+      <button class="control-button" title="Step back" onclick="back_tick()"><span class="material-symbols-outlined">arrow_left_alt</span></button>
+      <button class="control-button" title="Step forward" onclick="tick()"><span class="material-symbols-outlined">arrow_right_alt</span></button>
     </div>
     <div class="container">
-      <canvas id="screen" class="gamearea" oncontextmenu="return false;" onselect="return false;" onmousedown="handleMDown(event)" onmouseup="handleMUp(event)" onmousemove="getMousePos(event)" onmouseleave="handleMLeave()"></canvas>
+      <canvas id="screen" title="haha" class="gamearea" oncontextmenu="return false;" onselect="return false;" onmousedown="handleMDown(event)" onmouseup="handleMUp(event)" onmousemove="getMousePos(event)" onmouseleave="handleMLeave()"></canvas>
       <div class="settingsarea">
         <p>
           <b>*Spacebar / K:</b> pause<br>

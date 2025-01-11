@@ -74,6 +74,9 @@ let shiftdown = false;
 let lockDirection = "-"; // can be "-", "r"(recording direction), "ns" or "we"
 let suppressResizeLog = false;
 
+let tooltipLine1 = "";
+let tooltipLine2 = "";
+
 let mx = 0;
 let my = 0;
 let mx_last = 0;
@@ -459,6 +462,9 @@ function showData() {
 
     str += "; x: " + mx;
     str += "; y: " + my;
+    // also put coordinates in tooltip
+    tooltipLine1 = "x:"+mx+" y:"+my;
+    canvasElement.title = tooltipLine1+"\n"+tooltipLine2;
 
     str += "; tps: " + tps;
 
@@ -535,14 +541,17 @@ function recordLockDraw() {
     }
 }
 
+// MARK: Ruler
+// Called whenever ruler key pressed
 function recordAnchor() {
     mx_anchor = mx;
     my_anchor = my;
-    console.log("set anchor");
 }
 function updateRuler() {
+    if (!rulerActive) { return };
     dx = mx-mx_anchor;
     dy = my-my_anchor;
+    tooltipLine2 = "dx:"+dx+" dy:"+dy;
 }
 
 function putCellAtMouse(state) {
@@ -917,8 +926,13 @@ function handleKeyDown(e) {
         shiftdown = true;
     }
     if (e.ctrlKey && !e.repeat) {
-        recordAnchor();
         rulerActive = !rulerActive;
+        // clear ruler tooltip if ruler turned off
+        if (!rulerActive) {
+             tooltipLine2 = "";
+        } else {
+            recordAnchor();
+        }
     }
 }
 function handlePaste(e) {
@@ -928,6 +942,7 @@ function handlePaste(e) {
     insertPattern(str);
 }
 
+// Only called from console, very broken and unsupported
 function toggleThreading() {
     doThreads = !doThreads;
     if (doThreads) {

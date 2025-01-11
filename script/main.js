@@ -1,6 +1,10 @@
 let canvasElement = document.getElementById("screen");
 let canvas = canvasElement.getContext("2d");
 let body = document.getElementById("body");
+let helpOverlay = document.getElementById("help-overlay");
+expdate = new Date();
+expdate.setDate(Date.now()+(2*24*60*60*1000));
+let cookieContents = {firstTime:"true"};
 
 let cell_size_default = 8;
 let cell_size_warn = 2;
@@ -68,6 +72,9 @@ let isWorking = false;
 let isFirstMultiTick = true;
 
 let paused = false;
+let helpActive = false;
+let toastActive = false;
+let toastExtend = false;
 let m1down = false;
 let m2down = false;
 let shiftdown = false;
@@ -662,6 +669,67 @@ function updateRuleButtons() {
     }
 }
 
+// MARK: Pattern library
+// Fade toast in, then out. If called repeatedly,
+// text changes and toast period extends.
+function copyToast(id) {
+    toast = document.getElementById("toast");
+    toast.style.display = "block";
+    toast.innerHTML = "Successfully copied "+id;
+    toastExtend = true;
+    if (toastActive) { return };
+    console.log("got here")
+    toastActive = true;
+    let time = 200;
+    let hold_time = 1000;
+    let opacity_step = 50/time;
+    let opacity = 0;
+    toast.style.opacity = opacity;
+    // fade in
+    let interval1 = setInterval(() => {
+        opacity += opacity_step;
+        if (opacity < 1) {
+            toast.style.opacity = opacity;
+        } else {
+            toast.style.opacity = 1;
+            opacity = 1;
+            clearInterval(interval1);
+            
+            if (toastExtend) {
+                toastExtend = false;
+                console.log("wait");
+            }
+            let interval2 = setInterval(() => {
+                if (toastExtend) {
+                    toastExtend = false;
+                    console.log("wait");
+                } else {
+                    let interval3 = setInterval(() => {
+                        opacity -= opacity_step;
+                        if (opacity > 0) {
+                            toast.style.opacity = opacity;
+                        } else {
+                            toast.style.opacity = 0;
+                            toast.style.display = "none";
+                            toastActive = false;
+                            
+                            clearInterval(interval2);
+                            clearInterval(interval3);
+                        }
+                    }, 50);
+                }
+            }, hold_time);
+        }
+    }, 50);
+
+    
+}
+function copyLibPattern(id) {
+    pattern = document.getElementById(id).innerHTML;
+    navigator.clipboard.writeText(pattern);
+    copyToast(id);
+}
+
 // MARK: Parsers
 
 // Rulestring parser
@@ -904,7 +972,7 @@ function handleResize() {
 function handleKeyUp(e) {
     if (e.key == " " || e.key == "k") {
         e.preventDefault();
-        toggle_pause();
+        togglePause();
     }
     if (!e.shiftKey) {
         unlockDraw();
@@ -925,7 +993,7 @@ function handleKeyDown(e) {
         lockDraw();
         shiftdown = true;
     }
-    if (e.ctrlKey && !e.repeat) {
+    if (e.key == "c" && !e.repeat) {
         rulerActive = !rulerActive;
         // clear ruler tooltip if ruler turned off
         if (!rulerActive) {
@@ -953,6 +1021,49 @@ function toggleThreading() {
         console.log("Threading OFF");
     }
 }
+// MARK: Help display
+function toggleHelp() {
+    if (!helpActive) {
+        helpOverlay.style.display = "block";
+    } else {
+        helpOverlay.style.display = "none";
+        cookieContents.firstTime = false;
+        writeCookie();
+    }
+    helpActive = !helpActive;
+}
+
+// MARK: Cookie
+function parseCookie() {
+    if (!document.cookie) { writeCookie(); return };
+    cookieContents = {};
+    document.cookie.split(";")
+        .forEach((r) => {
+            cookieContents[r.split("=")[0]] = r.split("=")[1];
+        });
+    console.log("cookie", cookieContents);
+}
+function writeCookie() {
+    let cookieStr = "";
+    Object.keys(cookieContents).forEach((k) => {
+        if (k != "") {
+            cookieStr += k+"="+cookieContents[k]+"; ";
+        }
+    });
+    console.log(cookieStr);
+    console.log(cookieContents);
+    document.cookie = cookieStr;
+    console.log(document.cookie);
+}
+function checkCookie() {
+    parseCookie();
+    if (cookieContents.firstTime == "true") {
+        console.log("first time")
+        toggleHelp();
+    }
+}
+checkCookie();
+
 // MARK: Pause
 function forcePause() {
     document.getElementById("pause_btn").innerHTML = "<span class=\"material-symbols-outlined\">play_arrow</span>";
@@ -966,7 +1077,7 @@ function forcePlay() {
     recordTps();
 }
 
-function toggle_pause() {
+function togglePause() {
     paused = !paused;
     if (paused) {
         forcePause();

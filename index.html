@@ -8,23 +8,85 @@
     <link href="style.css" rel="stylesheet" type="text/css" media="all">
   </head>
   <body>
+    <div id="help-overlay" class="help-overlay">
+      <div class="help-panel">
+        <button class="close-button" onclick="toggleHelp()"><span class="material-symbols-outlined">close</span></button>
+        <div style="padding: 20px">
+          <b>Note:</b> this page can be accessed at any time by clicking the <span class="material-symbols-outlined">help</span> button. <br><br>
+          <b>This is John Conway's Game of Life cellular automaton.</b><br>
+          Cells on the grid follow simple rules:<br>
+          * If an <b>off</b> cell has 3 neighbours, it turns <b>on</b><br>
+          * If an <b>on</b> cell has 2 or 3 neighbours, it stays <b>on</b><br>
+          * Otherwise, the cell turns/stays <b>off</b>.<br>
+          <br>
+          These rules can be expressed in B/S notation - <b>B</b> is how many (0-8) neighbours a cell needs to be <u>b</u>orn, and <b>S</b> is how many neighbours a cell needs to <u>s</u>urvive.<br>
+          For Game of Life, they are <b>B3/S23</b>. Some others include:<br>
+          <b>* HighLife</b> - B36/S23<br>
+          <b>* Seeds</b> - B2/S<br>
+          <b>* Day & Night</b> - B3678/S12578<br>
+          <b>* Walled Cities</b> - B45678/S2345<br>
+          Feel free to try them by entering the rulestrings into the panel on the right, or using the rule buttons.<br>
+          <b style="color:crimson; font-size:20px">WARNING: flashing lights when 0 is set in B</b><br>
+          <br>
+          You can paste patterns coded in RLE or Plaintext. RLE will also set the rules automatically when you paste.<br>
+          Here's a small library of cool patterns in different rules, taken from <a href="https://conwaylife.com/wiki/" style="color:inherit">Game of Life wiki</a>.<br>
+          Click patterns to copy, then close this menu Ctrl+V in the game area to try them out.<br>
+          If a pattern doesn't fit, decrease the <b>cell size</b> slider until it does.<br>
+          <br>
+          <!-- MARK: PATTERN LIB
+           -->
+          <h1>Game of Life (B3/S23)</h3>
+          <div class="pattern-row">
+            <div class="pattern-img">
+              <img class="gif" src="https://conwaylife.com/w/images/8/81/Glider.gif" onclick="copyLibPattern('glider')">
+              <p class="pattern-title"><b>Glider</b></p>
+            </div>
+            <div class="pattern-img">
+              <img class="gif" src="https://conwaylife.com/w/images/b/b6/Gosperglidergun.gif" onclick="copyLibPattern('gosper-glider-gun')">
+              <p class="pattern-title"><b>Gosper's Glider Gun</b></p>
+            </div>
+          </div>
+
+          <div class="pattern-row">
+            <div class="pattern-img">
+              <img class="gif" src="https://conwaylife.com/w/images/e/e0/Dragon.gif" onclick="copyLibPattern('dragon')">
+              <p class="pattern-title"><b>Dragon</b></p>
+            </div>
+            <div class="pattern-img">
+              <img class="gif" src="https://conwaylife.com/w/images/a/a7/Koksgalaxy.gif" onclick="copyLibPattern('koks-galaxy')">
+              <p class="pattern-title"><b>Kok's Galaxy</b></p>
+            </div>
+          </div>
+          <div class="pattern-row">
+            <div class="pattern-img">
+              <img class="gif" src="https://conwaylife.com/w/images/c/ca/Windmill.gif" onclick="copyLibPattern('windmill')">
+              <p class="pattern-title"><b>Windmill</b></p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    <div class="toast" id="toast">
+      Successfully copied
+    </div>
     <div class="controls">
       <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined&display=block" rel="stylesheet"/>
       <button class="control-button" title="Randomise" onclick="randomiseMap()"><span class="material-symbols-outlined">ifl</span></button>
       <button class="control-button" title="Clear" onclick="clearMap()"><span class="material-symbols-outlined">ink_eraser</span></button>
-      <button class="control-button" title="Play/Pause" onclick="toggle_pause()" id="pause_btn"><span class="material-symbols-outlined">pause</span></button>
+      <button class="control-button" title="Play/Pause" onclick="togglePause()" id="pause_btn"><span class="material-symbols-outlined">pause</span></button>
       <button class="control-button" title="Step back" onclick="back_tick()"><span class="material-symbols-outlined">arrow_left_alt</span></button>
       <button class="control-button" title="Step forward" onclick="tick()"><span class="material-symbols-outlined">arrow_right_alt</span></button>
     </div>
     <div class="container">
-      <canvas id="screen" title="haha" class="gamearea" oncontextmenu="return false;" onselect="return false;" onmousedown="handleMDown(event)" onmouseup="handleMUp(event)" onmousemove="getMousePos(event)" onmouseleave="handleMLeave()"></canvas>
+      <canvas id="screen" class="gamearea" oncontextmenu="return false;" onselect="return false;" onmousedown="handleMDown(event)" onmouseup="handleMUp(event)" onmousemove="getMousePos(event)" onmouseleave="handleMLeave()"></canvas>
       <div class="settingsarea">
         <p>
           <b>*Spacebar / K:</b> pause<br>
           <b>*L:</b> step forward, <b>J:</b> step back<br>
           <b>*LMB:</b> draw, RMB:</b> erase<br>
           <b>*Hold Shift:</b> straight lines<br>
-          <b>*Ctrl:</b> toggle ruler<br>
+          <b>*C:</b> toggle ruler<br>
         </p>
         <label class="setting-label" for="tickRateSlider">tickrate: <span id="tickRateText">20 (default)</span></label>
           <input type="range" id="tickRateSlider" class="setting" min="0.2" max="250" value="20" step="0.1" oninput="updateTickrate(this.value)">
@@ -114,11 +176,53 @@
         <label class="setting-label" for="rulestring-field">rulestring:</label>
           <input type="text" id="rulestring-field" placeholder="B3/S23" value="B3/S23" onchange="parseRulestring(this.value)">
         
-
         <div class="spacer"></div>
+        <div style="display: flex; padding-bottom: 2%">
+          <button class="help-button" onclick="toggleHelp()"><span class="material-symbols-outlined">help</span></button>
+        </div>
         <span class="data_disp", id="data_text"></span>
       </div>
     </div>
+
+    <!-- MARK: PATTERN DATA
+     Pattern library data to be read by script -->
+<p class="pattern-data" id="placeholder"></p>
+<p class="pattern-data" id="glider">#N Glider
+#O Richard K. Guy
+#C The smallest, most common, and first discovered spaceship. Diagonal, has period 4 and speed c/4.
+#C www.conwaylife.com/wiki/index.php?title=Glider
+x = 3, y = 3, rule = B3/S23
+bob$2bo$3o!</p>
+<p class="pattern-data" id="gosper-glider-gun">#N Gosper glider gun
+#O Bill Gosper
+#C A true period 30 glider gun.
+#C The first known gun and the first known finite pattern with unbounded growth.
+#C www.conwaylife.com/wiki/index.php?title=Gosper_glider_gun
+x = 36, y = 9, rule = B3/S23
+24bo11b$22bobo11b$12b2o6b2o12b2o$11bo3bo4b2o12b2o$2o8bo5bo3b2o14b$2o8b
+o3bob2o4bobo11b$10bo5bo7bo11b$11bo3bo20b$12b2o!</p>
+<p class="pattern-data" id="dragon">#N Dragon
+#O Paul Tooke
+#C An orthogonal period 6 spaceship. The first c/6 spaceship to be constructed.
+#C www.conwaylife.com/wiki/index.php?title=Dragon
+x = 29, y = 18, rule = B3/S23
+12bo16b$12b2o14bo$10bob2o5bobo4b2ob$5bo3bo3b3o2bo4bo5b$2o3bo2bo6bobo5b
+3o2bo$2o3bob2o6bo3bobobo5b$2o3bo10bobo7b2ob$5b2o14bo6bo$7bo12bobo6b$7b
+o12bobo6b$5b2o14bo6bo$2o3bo10bobo7b2ob$2o3bob2o6bo3bobobo5b$2o3bo2bo6b
+obo5b3o2bo$5bo3bo3b3o2bo4bo5b$10bob2o5bobo4b2ob$12b2o14bo$12bo!</p>
+<p class="pattern-data" id="koks-galaxy">#N Kok's galaxy
+#O Jan Kok
+#C A period 8 oscillator that was found in 1971.
+#C www.conwaylife.com/wiki/index.php?title=Kok's_galaxy
+x = 9, y = 9, rule = 23/3
+2bo2bobob$2obob3ob$bo6bo$2o5bob2$bo5b2o$o6bob$b3obob2o$bobo2bo!</p>
+<p class="pattern-data" id="windmill">#N Windmill
+#O Dean Hickerson
+#C A period 4 oscillator found in November 1989.
+#C www.conwaylife.com/wiki/index.php?title=Windmill
+x = 18, y = 18, rule = B3/S23
+11bo6b$9b2obo5b$7b2o9b$10b2o6b$7b3o8b2$3o15b$3b2o2b3ob2o5b$10b7ob$b7o
+10b$5b2ob3o2b2o3b$15b3o2$8b3o7b$6b2o10b$9b2o7b$5bob2o9b$6bo!</p>
     <script type="text/javascript" src="script/main.js">  </script>
     
   </body>

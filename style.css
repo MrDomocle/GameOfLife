@@ -71,12 +71,17 @@ body {
     border: none;
     position: fixed;
 
-    right: 7.5%;
+    right: 22.5%;
     .material-symbols-outlined {
       color: #e2e2e2;
       font-size: 32px;
     }
     transition-duration: 100ms;
+  }
+  .close-button:hover {
+    .material-symbols-outlined {
+      color: #cecece;
+    }
   }
   .close-button:active {
     .material-symbols-outlined {

@@ -1,6 +1,6 @@
 body {
   background-color: black;
-  color: white;
+  color: rgb(255, 255, 255);
   font-family: 'Courier New', Courier, monospace;
   overflow: hidden;
 
@@ -114,6 +114,9 @@ body {
 
     background-color: #2c2f81ee;
     border-radius: 40px;
+    a {
+      color: #acaeff;
+    }
   }
   .help-button {
     background-color: #101142;

@@ -22,7 +22,8 @@ body {
     border-radius: 10px;
   }
 
-  .gamearea,.settingsarea {
+  .game-div,.settingsarea {
+    position: relative;
     display:flex;
     flex-direction: column;
     justify-content: flex-start;
@@ -34,14 +35,24 @@ body {
     border-radius: 20px;
     height: 100%;
   }
+  .gamearea,.toolarea {
+    position: absolute;
+    left:20px;
+    top:20px;
+    width: calc(100% - 40px);
+    height: calc(100% - 40px);
+  }
   .gamearea {
+    z-index: 0;
+  }
+  .toolarea {
+    z-index: 1;
+  }
+  .game-div {
     flex:3;
   }
   .settingsarea {
     flex:1;
-  }
-  .gamecanvas {
-    border-radius: 2.8px;
   }
   
   .control-button {

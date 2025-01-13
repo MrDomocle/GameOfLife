@@ -129,9 +129,9 @@
       <button class="control-button" title="Step forward" onclick="tick()"><span class="material-symbols-outlined">arrow_right_alt</span></button>
     </div>
     <div class="container">
-      <div>
+      <div class="game-div">
         <canvas id="screen" class="gamearea" oncontextmenu="return false;" onselect="return false;" onmousedown="handleMDown(event)" onmouseup="handleMUp(event)" onmousemove="getMousePos(event)" onmouseleave="handleMLeave()"></canvas>
-        <canvas id="tool-screen" class="gamearea" oncontextmenu="return false;" onselect="return false;" onmousedown="handleMDown(event)" onmouseup="handleMUp(event)" onmousemove="getMousePos(event)" onmouseleave="handleMLeave()"></canvas>
+        <canvas id="tool-screen" class="toolarea" oncontextmenu="return false;" onselect="return false;" onmousedown="handleMDown(event)" onmouseup="handleMUp(event)" onmousemove="getMousePos(event)" onmouseleave="handleMLeave()"></canvas>
       </div>
       <div class="settingsarea">
         <p>
@@ -139,7 +139,8 @@
           <b>*L:</b> step forward, <b>J:</b> step back<br>
           <b>*LMB:</b> draw, RMB:</b> erase<br>
           <b>*Hold Shift:</b> straight lines<br>
-          <b>*C:</b> toggle ruler<br>
+          <b>*A:</b> toggle ruler<br>
+          <b>*S:</b> toggle selection for copy/cut/paste<br>
         </p>
         <label class="setting-label" for="tickRateSlider">speed: <span id="tickRateText">20 (default)</span></label>
           <input type="range" id="tickRateSlider" class="setting" min="0.2" max="250" value="20" step="0.1" oninput="updateTickrate(this.value)">

@@ -1,5 +1,7 @@
 let canvasElement = document.getElementById("screen");
 let canvas = canvasElement.getContext("2d");
+let canvasToolElement = document.getElementById("tool-screen");
+let canvasTool = canvasToolElement.getContext("2d");
 let body = document.getElementById("body");
 let helpOverlay = document.getElementById("help-overlay");
 expdate = new Date();
@@ -9,7 +11,7 @@ let cookieContents = {firstTime:"true"};
 let cell_size_default = 8;
 let cell_size_warn = 2;
 let cell_size = cell_size_default;
-let MAP_SIZE = [Math.round((canvasElement.clientWidth-40)/cell_size), Math.round((canvasElement.clientHeight-40)/cell_size)];
+let MAP_SIZE = [Math.round((canvasElement.clientWidth)/cell_size), Math.round((canvasElement.clientHeight)/cell_size)];
 let old_map_size = [MAP_SIZE[0], MAP_SIZE[1]];
 
 let cellFillStyle = "white";
@@ -25,11 +27,17 @@ let rulerBgColour = "rgba(184, 185, 218, 0.9)";
 
 canvasElement.width = MAP_SIZE[0]*cell_size;
 canvasElement.height = MAP_SIZE[1]*cell_size;
+canvasToolElement.width = MAP_SIZE[0]*cell_size;
+canvasToolElement.height = MAP_SIZE[1]*cell_size;
+
 canvas.scale(cell_size,cell_size);
+canvasTool.scale(cell_size,cell_size);
+
 canvas.fillStyle = cellFillStyle;
-canvas.strokeStyle = rulerStrokeStyle;
-canvas.lineWidth = rulerStrokeWidth/cell_size;
-canvas.font = rulerFontStyle1 + rulerFontSize/cell_size + rulerFontStyle2;
+canvasTool.fillStyle = cellFillStyle;
+canvasTool.strokeStyle = rulerStrokeStyle;
+canvasTool.lineWidth = rulerStrokeWidth/cell_size;
+canvasTool.font = rulerFontStyle1 + rulerFontSize/cell_size + rulerFontStyle2;
 
 // index in rule arrays is the number of neighbours
 let born = [false, false, false, true, false, false, false, false, false];
@@ -49,6 +57,7 @@ let bornBuffer = 0;
 let tickRateDefault = 20;
 let tickRate = tickRateDefault;
 let frameRate = 50;
+let toolFrameRate = 60;
 
 let tickInterval = 1000/tickRate;
 let ticksThisSecond = 0;
@@ -56,6 +65,7 @@ let drawsThisSecond = 0;
 let draws = 0;
 let tps = 0;
 let frameInterval = 1000/frameRate;
+let toolInterval = 1000/toolFrameRate;
 let dataInterval = 1000/60;
 
 // map will be split into THREADS_* parts along each coordinate
@@ -95,13 +105,17 @@ let mx_last = 0;
 let my_last = 0;
 
 let rulerActive = false;
+let selectionActive = false;
 let mx_anchor = 0;
 let my_anchor = 0;
+let mx_sel_anchor = 0;
+let my_sel_anchor = 0;
 let dx = 0;
 let dy = 0;
 
 let tickTask = setInterval(tick, tickInterval);
 let startDrawTask = setInterval(signalRedrawMap, frameInterval);
+let toolDrawTask = setInterval(drawTool, toolInterval);
 let dataTask = setInterval(showData, dataInterval);
 let tpsTask = setInterval(recordTps, 1000);
 let drawCountTask = setInterval(recordDraws, 1000);
@@ -264,6 +278,7 @@ function randomiseMap() {
             }
         }
     }
+    redrawMap();
 }
 
 function getWorkerOffsets(i) {
@@ -450,30 +465,6 @@ function redrawMap() {
     }
     canvas.fill();
 
-    // draw ruler
-    if (rulerActive) {
-        canvas.beginPath();
-        canvas.moveTo(mx_anchor+0.5, my_anchor+0.5);
-        canvas.lineTo(mx+0.5,my+0.5);
-        canvas.stroke();
-        
-        let str = Math.sqrt(dx**2+dy**2).toFixed(1);
-        let textMetric = canvas.measureText(str);
-        let xm = (mx_anchor+mx-textMetric.width/2)/2;
-        let ym = (my_anchor+my-textMetric.fontBoundingBoxDescent/2)/2;
-        
-        canvas.beginPath();
-        canvas.fillStyle = rulerBgColour;
-        
-        let textRect = [xm-rulerFontMarginX, ym-textMetric.fontBoundingBoxAscent-rulerFontMarginY, textMetric.width+2*rulerFontMarginX, textMetric.fontBoundingBoxDescent*4+rulerFontMarginY];
-        canvas.roundRect(textRect[0], textRect[1], textRect[2], textRect[3], 0.4);
-        canvas.fill();
-
-        canvas.beginPath();
-        canvas.fillStyle = rulerFontColour;
-        canvas.fillText(str, xm, ym);
-        canvas.fillStyle = cellFillStyle;
-    }
     mapToMapLastDraw();
     isDrawing = false;
     drawsThisSecond++;
@@ -490,6 +481,42 @@ function signalRedrawMap() {
 
 function clearScreen() {
     canvas.clearRect(0,0,canvasElement.width,canvasElement.height);
+}
+function clearToolScreen() {
+    canvasTool.clearRect(0,0,canvasToolElement.width,canvasToolElement.height);
+}
+
+function drawTool() {
+    clearToolScreen();
+    // draw ruler
+    if (rulerActive) {
+        canvasTool.beginPath();
+        canvasTool.moveTo(mx_anchor+0.5, my_anchor+0.5);
+        canvasTool.lineTo(mx+0.5,my+0.5);
+        canvasTool.stroke();
+        
+        let str = Math.sqrt(dx**2+dy**2).toFixed(1);
+        let textMetric = canvasTool.measureText(str);
+        let xm = (mx_anchor+mx-textMetric.width/2)/2;
+        let ym = (my_anchor+my-textMetric.fontBoundingBoxDescent/2)/2;
+        
+        canvasTool.beginPath();
+        canvasTool.fillStyle = rulerBgColour;
+        
+        let textRect = [xm-rulerFontMarginX, ym-textMetric.fontBoundingBoxAscent-rulerFontMarginY, textMetric.width+2*rulerFontMarginX, textMetric.fontBoundingBoxDescent*4+rulerFontMarginY];
+        canvasTool.roundRect(textRect[0], textRect[1], textRect[2], textRect[3], 0.4);
+        canvasTool.fill();
+
+        canvasTool.beginPath();
+        canvasTool.fillStyle = rulerFontColour;
+        canvasTool.fillText(str, xm, ym);
+    }
+    // draw selection rectangle
+    if (selectionActive) {
+        canvasTool.beginPath();
+        canvasTool.roundRect(mx_sel_anchor, my_sel_anchor, mx-mx_sel_anchor, my-my_sel_anchor, 0.5);
+        canvasTool.stroke();
+    }
 }
 
 // MARK: ### UI & Debug
@@ -601,8 +628,8 @@ function getMousePos(event) {
     let rect = canvasElement.getBoundingClientRect();
     mx_last = mx;
     my_last = my;
-    mx = Math.floor((event.clientX - rect.left - 20) / cell_size);
-    my = Math.floor((event.clientY - rect.top - 20) / cell_size);
+    mx = Math.floor((event.clientX - rect.left) / cell_size);
+    my = Math.floor((event.clientY - rect.top) / cell_size);
     switch (lockDirection) {
         case "ns":
             mx = mx_last;
@@ -640,6 +667,10 @@ function recordLockDraw() {
 function recordAnchor() {
     mx_anchor = mx;
     my_anchor = my;
+}
+function recordSelectAnchor() {
+    mx_sel_anchor = mx;
+    my_sel_anchor = my;
 }
 function updateRuler() {
     if (!rulerActive) { return };
@@ -810,24 +841,82 @@ function parseRulestring(str) {
 // Pattern parser
 function getPatternType(str) {
     let c0 = str.charAt(0);
-    if (c0 == "!" || c0 == ".") { return "plaintext" };
+    if (c0 == "!" || c0 == "." || c0 == "O") { return "plaintext" };
     if (c0 == "#" || c0 == "x") { return "rle" };
     return "unknown"
 }
 function insertPattern(str) {
     let type = getPatternType(str);
     console.log(type);
-    let block;
+    let parse;
     if (type == "plaintext") {
-        block = parsePlaintext(str);
+        parse = parsePlaintext(str);
     } else if (type == "rle") {
-        block = parseRle(str);
+        parse = parseRle(str);
     } else {
         console.log("Not a recognised pattern");
         return;
     }
-    map.insertBlock(block, mx, my, true);
+    console.log(parse);
+    let bbox = selBoxCorners();
+    let x = selectionActive ? bbox.lx : mx-Math.floor(parse.x/2);
+    let y = selectionActive ? bbox.ly : my-Math.floor(parse.y/2);
+    map.insertBlock(parse.block, x, y, true);
     redrawMap();
+}
+// returns corner coordinates of selection, top left first
+function selBoxCorners() {
+    if (mx_sel_anchor < mx) {
+        xStart = mx_sel_anchor;
+        xEnd = mx;
+    } else {
+        xStart = mx;
+        xEnd = mx_sel_anchor;
+    }
+
+    if (my_sel_anchor < my) {
+        yStart = my_sel_anchor;
+        yEnd = my;
+    } else {
+        yStart = my;
+        yEnd = my_sel_anchor;
+    }
+    return {lx: xStart, ly: yStart, rx: xEnd, ry: yEnd};
+}
+
+function copyPattern() {
+    if (!selectionActive) { return };
+    let bbox = selBoxCorners();
+    copyPlaintext(bbox.lx, bbox.ly, bbox.rx, bbox.ry);
+}
+function cutPattern() {
+    if (!selectionActive) { return };
+    let bbox = selBoxCorners();
+    copyPlaintext(bbox.lx, bbox.ly, bbox.rx, bbox.ry);
+    // remove from original location
+    for (x = xStart; x < xEnd; x++) {
+        for (y = yStart; y < yEnd; y++) {
+            map.setState(x,y, false);
+        }
+    }
+    redrawMap();
+}
+function copyPlaintext(xStart, yStart, xEnd, yEnd) {
+    let str = "" 
+    for (y = yStart; y < yEnd; y++) {
+        for (x = xStart; x < xEnd; x++) {
+            if (map.getState(x,y)) {
+                str += "O";
+            } else {
+                str += ".";
+            }
+        }
+        if (y != yEnd-1) {
+            str += "\n";
+        }
+    }
+    navigator.clipboard.writeText(str);
+    toast("Successfully copied selection");
 }
 
 function parsePlaintext(str) {
@@ -837,7 +926,7 @@ function parsePlaintext(str) {
 
     let xMax = 0;
     let yMax = 0;
-    // 1st pass: count comment offset and maximum X length
+    // 1st pass: count comment offset and dimensions
     for (line = 0; line < workStr.length; line++) {
         // ignore comments and count how many lines of them there are
         if (workStr[line].charAt(0) == "!") {
@@ -856,7 +945,7 @@ function parsePlaintext(str) {
         }
     }
 
-    return block;
+    return {block: block, x: xMax, y: yMax};
 }
 // MARK: rle
 function parseRleMeta(str) {
@@ -981,23 +1070,28 @@ function parseRle(str) {
             }
         }
     }
-    return block;
+    return {block: block, x: xMax, y: yMax};
 }
 
 // MARK: Resize
 function handleResize() {
     clearInterval(startDrawTask);
     old_map_size = [MAP_SIZE[0], MAP_SIZE[1]];
-    MAP_SIZE = [Math.round((canvasElement.clientWidth-40)/cell_size), Math.round((canvasElement.clientHeight-40)/cell_size)];
+    MAP_SIZE = [Math.round((canvasElement.clientWidth)/cell_size), Math.round((canvasElement.clientHeight)/cell_size)];
 
     // reset canvas params
     canvasElement.width = MAP_SIZE[0]*cell_size;
     canvasElement.height = MAP_SIZE[1]*cell_size;
     canvas.scale(cell_size,cell_size);
     canvas.fillStyle = cellFillStyle;
-    canvas.strokeStyle = rulerStrokeStyle;
-    canvas.lineWidth = rulerStrokeWidth/cell_size;
-    canvas.font = rulerFontStyle1 + rulerFontSize/cell_size + rulerFontStyle2;
+
+    canvasToolElement.width = MAP_SIZE[0]*cell_size;
+    canvasToolElement.height = MAP_SIZE[1]*cell_size;
+    canvasTool.scale(cell_size,cell_size);
+
+    canvasTool.strokeStyle = rulerStrokeStyle;
+    canvasTool.lineWidth = rulerStrokeWidth/cell_size;
+    canvasTool.font = rulerFontStyle1 + rulerFontSize/cell_size + rulerFontStyle2;
     
     // apply to map
     map.resize(MAP_SIZE[0], MAP_SIZE[1]);
@@ -1023,7 +1117,7 @@ function handleKeyUp(e) {
         shiftdown = false;
     }
     if (!e.ctrlKey) {
-        ctrlDown = false;
+        ctrldown = false;
     }
 }
 function handleKeyDown(e) {
@@ -1037,13 +1131,32 @@ function handleKeyDown(e) {
         lockDraw();
         shiftdown = true;
     }
-    if (e.key == "c" && !e.repeat) {
+    if (e.key == "a" && !e.repeat) {
         rulerActive = !rulerActive;
         // clear ruler tooltip if ruler turned off
         if (!rulerActive) {
              tooltipLine2 = "";
         } else {
             recordAnchor();
+        }
+    }
+    if (e.key == "s" && !e.repeat) {
+        selectionActive = !selectionActive;
+        // clear ruler tooltip if ruler turned off
+        if (!selectionActive) {
+             tooltipLine2 = "";
+        } else {
+            recordSelectAnchor();
+        }
+    }
+    if (e.key == "c" && e.ctrlKey && !e.repeat) {
+        if (selectionActive) {
+            copyPattern();
+        }
+    }
+    if (e.key == "x" && e.ctrlKey && !e.repeat) {
+        if (selectionActive) {
+            cutPattern();
         }
     }
 }

@@ -10,7 +10,7 @@ Written in a couple of weeks with a focus on good looks.
 ## What is this?  
 This is Conway's Game of Life, conceived in 1970 by British mathematician John Conway.  
 
-> A common misconception is that complex patterns and interactions come from complex rules. Conway's Game of Life proves this wrong.  
+> A common misconception is that complex behaviours come from complex rules. Conway's Game of Life proves this wrong.  
 
 The game consists of a grid of cells that can be live or dead, i.e. on or off.  
 Every next generation (step) of this simulation takes the previous one and applies these simple rules:  

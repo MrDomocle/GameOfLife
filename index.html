@@ -37,12 +37,12 @@
           Rules can be expressed in B/S notation (rulestring):<br>
           <b>B</b> neighbours to be <u>b</u>orn, <b>S</b> neighbours to <u>s</u>urvive.<br>
           <br>
-          For Game of Life, the rulestring is <b>B3/S23</b>. Some others include:<br>
-          <b>* HighLife</b> - B36/S23<br>
-          <b>* Seeds</b> - B2/S<br>
-          <b>* Day & Night</b> - B3678/S12578<br>
-          <b>* Walled Cities</b> - B45678/S2345<br>
-          Feel free to try them by entering the rulestrings into the panel on the right, or using the rule buttons.<br>
+          For Game of Life, the rulestring is <u class="sample-rule" id="sample-life" onclick="loadSampleRule('sample-life')">B3/S23</u>. Some others:<br>
+          <b>* HighLife</b> - <u class="sample-rule" id="sample-highlife" onclick="loadSampleRule('sample-highlife')">B36/S23</u><br>
+          <b>* Seeds</b> - <u class="sample-rule" id="sample-seeds" onclick="loadSampleRule('sample-seeds')">B2/S</u><br>
+          <b>* Day & Night</b> - <u class="sample-rule" id="sample-daynight" onclick="loadSampleRule('sample-daynight')">B3678/S12578</u><br>
+          <b>* Walled Cities</b> - <u class="sample-rule" id="sample-cities" onclick="loadSampleRule('sample-cities')">B45678/S2345</u><br>
+          Click the rulestring to apply it. You can also put in your own in the panel on the right!<br>
           <b style="color:crimson; font-size:20px">FLASHING LIGHTS WARNING: setting 0 neighbours for birth flashes the whole screen</b><br>
           <br>
           The website supports pasting RLE and Plaintext patterns - just press Ctrl+V in the game area.<br>
@@ -129,7 +129,10 @@
       <button class="control-button" title="Step forward" onclick="tick()"><span class="material-symbols-outlined">arrow_right_alt</span></button>
     </div>
     <div class="container">
-      <canvas id="screen" class="gamearea" oncontextmenu="return false;" onselect="return false;" onmousedown="handleMDown(event)" onmouseup="handleMUp(event)" onmousemove="getMousePos(event)" onmouseleave="handleMLeave()"></canvas>
+      <div>
+        <canvas id="screen" class="gamearea" oncontextmenu="return false;" onselect="return false;" onmousedown="handleMDown(event)" onmouseup="handleMUp(event)" onmousemove="getMousePos(event)" onmouseleave="handleMLeave()"></canvas>
+        <canvas id="tool-screen" class="gamearea" oncontextmenu="return false;" onselect="return false;" onmousedown="handleMDown(event)" onmouseup="handleMUp(event)" onmousemove="getMousePos(event)" onmouseleave="handleMLeave()"></canvas>
+      </div>
       <div class="settingsarea">
         <p>
           <b>*Spacebar / K:</b> pause<br>

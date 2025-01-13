@@ -1,2 +1,2 @@
 #!/bin/bash
-neocities upload -d .
+neocities push --prune .

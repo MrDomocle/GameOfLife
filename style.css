@@ -117,6 +117,9 @@ body {
     a {
       color: #acaeff;
     }
+    .sample-rule {
+      cursor: pointer;
+    }
   }
   .help-button {
     background-color: #101142;

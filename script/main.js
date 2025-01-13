@@ -52,6 +52,8 @@ let frameRate = 50;
 
 let tickInterval = 1000/tickRate;
 let ticksThisSecond = 0;
+let drawsThisSecond = 0;
+let draws = 0;
 let tps = 0;
 let frameInterval = 1000/frameRate;
 let dataInterval = 1000/60;
@@ -69,6 +71,9 @@ let tickWorkers = Array(THREADS);
 let workerMapArrs = Array(THREADS);
 let activeWorkers = 0;
 let isWorking = false;
+let isDrawing = false;
+let isReadyToDraw = false;
+let isDrawQueued = false;
 let isFirstMultiTick = true;
 
 let paused = false;
@@ -96,9 +101,10 @@ let dx = 0;
 let dy = 0;
 
 let tickTask = setInterval(tick, tickInterval);
-let drawTask = setInterval(redrawMap, frameInterval);
+let startDrawTask = setInterval(signalRedrawMap, frameInterval);
 let dataTask = setInterval(showData, dataInterval);
 let tpsTask = setInterval(recordTps, 1000);
+let drawCountTask = setInterval(recordDraws, 1000);
 
 window.addEventListener("resize", handleResize);
 window.addEventListener("keyup", handleKeyUp);
@@ -107,6 +113,7 @@ window.addEventListener("paste", handlePaste);
 
 let map;
 let map_prev;
+let map_last_draw;
 
 // debugging only
 let perfTimes = new Array();
@@ -228,6 +235,7 @@ randomiseMap();
 function initMap() {
     map = new MapMatrix(MAP_SIZE[0], MAP_SIZE[1]);
     map_prev = new MapMatrix(MAP_SIZE[0], MAP_SIZE[1]);
+    map_last_draw = new MapMatrix(MAP_SIZE[0], MAP_SIZE[1]);
 }
 function initWorkerMaps() {
     for (i = 0; i < THREADS; i++) {
@@ -241,6 +249,9 @@ function mapToMapPrev() {
 }
 function mapPrevToMap() {
     map.array.set(map_prev.array);
+}
+function mapToMapLastDraw() {
+    map_last_draw.array.set(map.array);
 }
 
 function randomiseMap() {
@@ -342,6 +353,7 @@ function tick() {
 
     } else { localtick(); }
     ticksThisSecond++;
+    redrawMap();
 }
 function concatworkerMapArrs() {
     for (i = 0; i < THREADS; i++) {
@@ -412,14 +424,27 @@ function localtick() {
 
 // MARK: Drawing
 function redrawMap() {
-    clearScreen();
+    if (isDrawing || !isReadyToDraw) {
+        isDrawQueued = true;
+        return;
+    }
+    isDrawing = true;
+    isReadyToDraw = false;
+    isDrawQueued = false;
 
     // draw GoL
     canvas.beginPath();
     for (x = 0; x < MAP_SIZE[0]; x++) {
         for (y = 0; y < MAP_SIZE[1]; y++) {
-            if (map.getState(x,y)) {
+            // check that cell actually changed since last time and needs to be drawn
+
+            // add newborn cells
+            if (map.getState(x,y) && !map_last_draw.getState(x,y)) {
                 canvas.roundRect(x,y, 1,1, 0.2);
+            }
+            // remove dead cells
+            else if (!map.getState(x,y) && map_last_draw.getState(x,y)) {
+                canvas.clearRect(x,y,1,1);
             }
         }
     }
@@ -449,11 +474,18 @@ function redrawMap() {
         canvas.fillText(str, xm, ym);
         canvas.fillStyle = cellFillStyle;
     }
+    mapToMapLastDraw();
+    isDrawing = false;
+    drawsThisSecond++;
 }
 function clearMap() {
     map.clear();
     mapToMapPrev();
     clearScreen()
+}
+function signalRedrawMap() {
+    isReadyToDraw = true;
+    if (isDrawQueued) { redrawMap() };
 }
 
 function clearScreen() {
@@ -473,6 +505,8 @@ function showData() {
     tooltipLine1 = "x:"+mx+" y:"+my;
     canvasElement.title = tooltipLine1+"\n"+tooltipLine2;
 
+    str += "; draws: " + draws;
+
     str += "; tps: " + tps;
 
     document.getElementById("data_text").innerHTML = str;
@@ -480,6 +514,59 @@ function showData() {
 function recordTps() {
     tps = (!paused) ? ticksThisSecond : "(paused)";
     ticksThisSecond = 0;
+}
+function recordDraws() {
+    draws = drawsThisSecond;
+    drawsThisSecond = 0;
+}
+// Fade toast in, then out. If called repeatedly,
+// text changes and toast period extends.
+function toast(text) {
+    toastEl = document.getElementById("toast");
+    toastEl.style.display = "block";
+    toastEl.innerHTML = text;
+    toastExtend = true;
+    if (toastActive) { return };
+    toastActive = true;
+    let time = 200;
+    let hold_time = 1000;
+    let opacity_step = 50/time;
+    let opacity = 0;
+    toastEl.style.opacity = opacity;
+    // fade in
+    let interval1 = setInterval(() => {
+        opacity += opacity_step;
+        if (opacity < 1) {
+            toastEl.style.opacity = opacity;
+        } else {
+            toastEl.style.opacity = 1;
+            opacity = 1;
+            clearInterval(interval1);
+            
+            if (toastExtend) {
+                toastExtend = false;
+            }
+            let interval2 = setInterval(() => {
+                if (toastExtend) {
+                    toastExtend = false;
+                } else {
+                    let interval3 = setInterval(() => {
+                        opacity -= opacity_step;
+                        if (opacity > 0) {
+                            toastEl.style.opacity = opacity;
+                        } else {
+                            toastEl.style.opacity = 0;
+                            toastEl.style.display = "none";
+                            toastActive = false;
+                            
+                            clearInterval(interval2);
+                            clearInterval(interval3);
+                        }
+                    }, 50);
+                }
+            }, hold_time);
+        }
+    }, 50);
 }
 
 // MARK: Mouse
@@ -669,65 +756,19 @@ function updateRuleButtons() {
     }
 }
 
-// MARK: Pattern library
-// Fade toast in, then out. If called repeatedly,
-// text changes and toast period extends.
-function copyToast(id) {
-    toast = document.getElementById("toast");
-    toast.style.display = "block";
-    toast.innerHTML = "Successfully copied "+id;
-    toastExtend = true;
-    if (toastActive) { return };
-    console.log("got here")
-    toastActive = true;
-    let time = 200;
-    let hold_time = 1000;
-    let opacity_step = 50/time;
-    let opacity = 0;
-    toast.style.opacity = opacity;
-    // fade in
-    let interval1 = setInterval(() => {
-        opacity += opacity_step;
-        if (opacity < 1) {
-            toast.style.opacity = opacity;
-        } else {
-            toast.style.opacity = 1;
-            opacity = 1;
-            clearInterval(interval1);
-            
-            if (toastExtend) {
-                toastExtend = false;
-                console.log("wait");
-            }
-            let interval2 = setInterval(() => {
-                if (toastExtend) {
-                    toastExtend = false;
-                    console.log("wait");
-                } else {
-                    let interval3 = setInterval(() => {
-                        opacity -= opacity_step;
-                        if (opacity > 0) {
-                            toast.style.opacity = opacity;
-                        } else {
-                            toast.style.opacity = 0;
-                            toast.style.display = "none";
-                            toastActive = false;
-                            
-                            clearInterval(interval2);
-                            clearInterval(interval3);
-                        }
-                    }, 50);
-                }
-            }, hold_time);
-        }
-    }, 50);
-
-    
+function loadSampleRule(id) {
+    let rule = document.getElementById(id).innerHTML
+    parseRulestring(rule);
+    updateRulestring();
+    toast("Rules are now "+rule);
 }
+
+// MARK: Pattern library
+
 function copyLibPattern(id) {
     pattern = document.getElementById(id).innerHTML;
     navigator.clipboard.writeText(pattern);
-    copyToast(id);
+    toast("Successfully copied "+id);
 }
 
 // MARK: Parsers
@@ -786,6 +827,7 @@ function insertPattern(str) {
         return;
     }
     map.insertBlock(block, mx, my, true);
+    redrawMap();
 }
 
 function parsePlaintext(str) {
@@ -944,7 +986,7 @@ function parseRle(str) {
 
 // MARK: Resize
 function handleResize() {
-    clearInterval(drawTask);
+    clearInterval(startDrawTask);
     old_map_size = [MAP_SIZE[0], MAP_SIZE[1]];
     MAP_SIZE = [Math.round((canvasElement.clientWidth-40)/cell_size), Math.round((canvasElement.clientHeight-40)/cell_size)];
 
@@ -960,12 +1002,14 @@ function handleResize() {
     // apply to map
     map.resize(MAP_SIZE[0], MAP_SIZE[1]);
     map_prev.resize(MAP_SIZE[0], MAP_SIZE[1]);
+    map_last_draw = new MapMatrix(MAP_SIZE[0], MAP_SIZE[1]);
+    redrawMap();
 
     if (doThreads) {
         killWorkers();
         initWorkers();
     }
-    drawTask = setInterval(redrawMap, frameInterval);
+    startDrawTask = setInterval(signalRedrawMap, frameInterval);
 }
 
 // MARK: Keys

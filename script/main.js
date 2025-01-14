@@ -871,8 +871,8 @@ function insertPattern(str) {
     }
     console.log(parse);
     let bbox = selBoxCorners();
-    let x = selectionActive ? bbox.lx : mx-Math.floor(parse.x/2);
-    let y = selectionActive ? bbox.ly : my-Math.floor(parse.y/2);
+    let x = selectionActive ? Math.floor((bbox.lx+bbox.rx)/2)-Math.floor(parse.x/2) : mx-Math.floor(parse.x/2);
+    let y = selectionActive ? Math.floor((bbox.ly+bbox.ry)/2)-Math.floor(parse.y/2) : my-Math.floor(parse.y/2);
     map.insertBlock(parse.block, x, y, true);
     redrawMap();
 }

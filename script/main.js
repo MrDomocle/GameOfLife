@@ -145,6 +145,7 @@ function printPerfTimes() {
 }
 
 class MapMatrix {
+    fit;
     array;
     constructor(x, y) {
         this.xSize = x;
@@ -172,6 +173,11 @@ class MapMatrix {
     setStateSafe(x, y, state) {
         if (x < this.xSize && y < this.ySize && x >= 0 && y >= 0) {
             this.array[x*this.ySize+y] = state ? 1 : 0;
+        } else {
+            if (this.fit) {
+                this.fit = false;
+                toast("Some pasted cells did not fit!");
+            }
         }
     }
     setStateRaw(x, y, state) {
@@ -197,7 +203,8 @@ class MapMatrix {
     }
     // takes a bool array (can be jagged) and its top-left offset
     // can be set to not overwrite live cells with dead according to pattern
-    insertBlock(block, xStart, yStart, overwrite) {        
+    insertBlock(block, xStart, yStart, overwrite) {     
+        this.fit = true;   
         for (let y = 0; y < block.length; y++) {
             for (let x = 0; x < block[y].length; x++) {
                 if (!overwrite) {
@@ -523,18 +530,23 @@ function drawTool() {
 function showData() {
     let str = "";
     updateRuler();
-    str += "p: " + popNow;
-    str += "; b: " + bornNow;
+    
 
-    str += "; x: " + mx;
+    str += "fps: " + draws;
+
+    str += "; tps: " + tps;
+
+    str += ";<br>x: " + mx;
     str += "; y: " + my;
+
+    str += "; pop: " + popNow;
+    str += "; born: " + bornNow;
+
     // also put coordinates in tooltip
     tooltipLine1 = "x:"+mx+" y:"+my;
     canvasElement.title = tooltipLine1+"\n"+tooltipLine2;
 
-    str += "; draws: " + draws;
-
-    str += "; tps: " + tps;
+    
 
     document.getElementById("data_text").innerHTML = str;
 }
